@@ -1,4 +1,5 @@
-# GDS Invoicing Tool
+# GDS React Web Application
+
 Single Page App on Google Apps Script using React.js
 
 ## Usage

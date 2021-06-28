@@ -1,10 +1,5 @@
 import { createContext } from 'react';
 
-const AppContext = createContext({
-    product: {
-        value: 'Notify',
-        updateFunction: () => {}
-    }
-  });
+const AppContext = createContext({});
 
 export default AppContext;
