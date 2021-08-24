@@ -1,4 +1,6 @@
 import React, { useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
+import linkifyName from '../../../js/functions/linkifyName';
 
 import { Link } from '../../../utils/Link';
 
@@ -8,7 +10,8 @@ function Header(props) {
     containerClassName,
     homepageUrlHref,
     homepageUrlTo,
-    navigation,
+    //navigation,
+    sections,
     navigationClassName,
     productName,
     serviceName,
@@ -20,6 +23,13 @@ function Header(props) {
     assetsPath, // We don't want this, but just in case someone passes it, we don't want it to arrive as an attribute on the header
     ...attributes
   } = props;
+  const location = useLocation();
+  useEffect(() => {
+    headerRef.current.scrollIntoView() 
+},[location]);
+  
+  
+  const navigation = Object.keys(sections).map(section => ( { active: location.pathname.includes(linkifyName(section)),  children: <Link to={`/${linkifyName(section)}`} className={"govuk-header__link"}>{section}</Link>} ))
 
   const headerRef = useRef();
   let productNameComponent;
@@ -112,7 +122,7 @@ function Header(props) {
       ref={headerRef}
     >
       <div className={`govuk-header__container ${containerClassName}`}>
-        <div className="govuk-header__logo" style={{width: "100%"}}>
+        <div className="govuk-header__logo">
           <Link
             to={homepageUrlTo}
             href={homepageUrlHref}

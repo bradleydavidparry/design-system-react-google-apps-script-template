@@ -12,6 +12,9 @@ function DateInput(props) {
     items,
     namePrefix,
     onChange,
+    day,
+    month,
+    year,
     ...attributes
   } = props;
 
@@ -34,6 +37,9 @@ function DateInput(props) {
     describedBy += ` ${errorId}`;
     errorMessageComponent = <ErrorMessage {...errorMessage} id={errorId} />;
   }
+  
+  // const date = value ? new Date(value) : "";
+  // const [day,month,year] = date ? [date.getDate(),date.getMonth() + 1,date.getFullYear()] : ['','',''];
 
   if (items && items.length > 0) {
     dateInputItems = items;
@@ -43,16 +49,19 @@ function DateInput(props) {
         name: 'day',
         className: 'govuk-input--width-2',
         type: 'text',
+        defaultValue: day,
       },
       {
         name: 'month',
         className: 'govuk-input--width-2',
         type: 'text',
+        defaultValue: month,
       },
       {
         name: 'year',
         className: 'govuk-input--width-4',
         type: 'text',
+        defaultValue: year,
       },
     ];
   }

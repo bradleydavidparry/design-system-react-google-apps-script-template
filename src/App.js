@@ -1,44 +1,78 @@
 import React, { useState, useEffect } from "react";
+import {
+  HashRouter as Router,
+  Switch,
+  Route,
+  Redirect
+} from "react-router-dom";
 import AppContext from './js/views/AppContext';
-import processData from './js/functions/dataProcessing';
+import processStructureData from './js/functions/dataProcessing';
+import linkifyName from './js/functions/linkifyName';
 import { Template } from './govuk/index';
+import Section from './js/components/Section';
 
 function App(){
     const [loading, setLoading] = useState(true);
-    const [data, setData] = useState(null)
-
+    const [userType,setUserType] = useState(null);
+    const [user,setUser] = useState(null);
+    const [sections,setSections] = useState([]);
+    const [defaultSection, setDefaultSection] = useState(null);
+    const [pageTitle, setPageTitle] = useState("");
+    const [dataObject, setDataObject] = useState([]);
+    const [filterObject, setFilterObject] = useState({filters: {}, "Search Bar": "", sort: {field: null, dir: 1}});
+    
     const value = {
-        data: {
-            value: data, 
-            updateFunction: setData
-        },
-        loading
+      dataObject,
+      setDataObject,
+      sections,
+      userType,
+      setPageTitle,
+      loading,
+      filterObject,
+      setFilterObject,
+      user
     }
     
     useEffect(() => {
       google.script.run
-          .withSuccessHandler(processData)
+          .withSuccessHandler(processStructureData)
           .withUserObject(
             {
-              setData,
+              setDataObject,
+              setSections,
+              setUserType,
+              linkifyName,
+              setDefaultSection,
+              setUser,
               setLoading
             }
           )
-          .getData();
+          .getStructureData();
     },[]);
     
     const templateProps = {
-      title: 'Web App Title',
-      strapline: 'Description of the application',
-      header: {},
+      title: loading ? "Fetching data" : pageTitle,
+      strapline: '',
+      header: {
+        serviceName:"Web App Title",
+        sections
+      },
       footer: {},
       beforeContent: ''
     }
-
+    
     return ( <AppContext.Provider value={value}>
-              <Template {...templateProps}>
-               Content
-              </Template>
+              <Router>
+                <Template {...templateProps}>
+                  <Switch>
+                    <Route exact path="/" render={() =>  <Redirect to={`${defaultSection}`} />} />
+                    {Object.keys(sections).map(section => (
+                      <Route key={section} path={`/${linkifyName(section)}`}>
+                        <Section views={sections[section]} name={section} />
+                      </Route>))}
+                  </Switch>
+                </Template>
+              </Router>
              </AppContext.Provider>
             );
   }

@@ -1,0 +1,11 @@
+.govuk-label {
+  font-weight: bold;
+}
+
+.govuk-fieldset__legend {
+  font-weight: bold;
+}
+
+caption {
+  caption-side: top;
+}

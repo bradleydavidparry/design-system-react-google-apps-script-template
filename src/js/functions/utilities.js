@@ -14,7 +14,9 @@ function formatMoney(amount, decimalCount = 2, decimal = ".", thousands = ",") {
     }
 };
 
-function formatDate(date) {
+function formatDateTime(date) {
+    if(!date) return "";
+    date = new Date(date);
     var hours = date.getHours();
     var minutes = date.getMinutes();
     var ampm = hours >= 12 ? 'pm' : 'am';
@@ -27,11 +29,34 @@ function formatDate(date) {
     day = day < 10 ? '0' + day : day;
     var month = date.getMonth()+1;
     month = month < 10 ? '0' + month : month;
-
+    
     return day + "/" + month + "/" + date.getFullYear() + " " + strTime;
+}
+
+function formatDate(date) {
+    if(!date) return "";
+    date = new Date(date);
+    var day = date.getDate();
+    day = day < 10 ? '0' + day : day;
+    var month = date.getMonth()+1;
+    month = month < 10 ? '0' + month : month;
+    return day + "/" + month + "/" + date.getFullYear();
+}
+
+function normalise( text ) {
+    return text.replace( /\W+/g, '' ).replace( /^\d+/, '' );
+}
+
+function emailToName(email){
+    return email.replace("@digital.cabinet-office.gov.uk","")
+                .replace(/\./g," ")
+                .replace(/(^|\s)\S/g, function(t) { return t.toUpperCase() });
 }
 
 export { 
     formatMoney,
-    formatDate
+    formatDate,
+    formatDateTime,
+    normalise,
+    emailToName
 };

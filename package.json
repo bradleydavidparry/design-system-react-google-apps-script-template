@@ -5,8 +5,9 @@
   "main": "index.js",
   "scripts": {
     "build": "webpack --mode production && rm dist/main.js",
-    "deletefiles": "rm dist/govuk-frontend-button.js && rm dist/govuk-frontend-notification-banner.js && rm dist/vendors~govuk-frontend-header.js && rm dist/vendors~govuk-frontend-accordion.js && rm dist/vendors~govuk-frontend-character-count.js && rm dist/vendors~govuk-frontend-error-summary.js && rm dist/vendors~govuk-frontend-checkboxes.js && rm dist/vendors~govuk-frontend-radios.js && rm dist/vendors~govuk-frontend-tabs.js",
-    "deploy": "npm run build && cd dist && clasp push"
+    "devbuild": "webpack --mode development && rm dist/main.js",
+    "deploy": "npm run build && cd dist && clasp push",
+    "devdeploy": "npm run devbuild && cd dist && clasp push"
   },
   "keywords": [],
   "author": "",
@@ -47,7 +48,6 @@
     "react-dom": "^16.13.1",
     "react-helmet": "^6.1.0",
     "react-router-dom": "^5.2.0",
-    "react-select": "^3.1.0",
     "react-table-v6": "^6.8.6",
     "style-loader": "^1.2.1",
     "uuid": "^7.0.3"

@@ -3,7 +3,6 @@ import { Helmet } from 'react-helmet';
 import { SkipLink } from '../components/skip-link/index';
 import { Header } from '../components/header/index';
 import { Footer } from '../components/footer/index';
-import { Loading } from '../../js/components/ui/Loading';
 import AppContext from '../../js/views/AppContext';
 
 function Template(props) {
@@ -46,12 +45,12 @@ function Template(props) {
       <Header {...header} />
 
       <div className={`govuk-width-container ${containerClassName || ''}`}>
-      <div class="outdent-to-full-viewport-width brand-performance">
-      <div class="outdent-to-full-viewport-width-inner hero-banner vertical-padding-medium">
-       <h1 class="hero-banner-heading">
+      <div className="outdent-to-full-viewport-width brand-performance">
+      <div className="outdent-to-full-viewport-width-inner hero-banner vertical-padding-medium">
+       <h1 className="hero-banner-heading">
         {title}
        </h1>
-       <div class="hero-banner-strapline">
+       <div className="hero-banner-strapline">
         {strapline}
        </div>
       </div>
@@ -62,8 +61,9 @@ function Template(props) {
           id="main-content"
           role="main"
           lang={mainLang || null}
+          style={{paddingTop: "0px"}}
         >
-          {loading ? <Loading /> : children}
+          {loading ? null : children}
         </main>
       </div>
 

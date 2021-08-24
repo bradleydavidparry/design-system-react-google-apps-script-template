@@ -62,7 +62,7 @@ function Table(props) {
       <tbody className="govuk-table__body">
         {filteredRows.map((row, rowIndex) => (
           <tr key={row.reactListKey || rowIndex} className="govuk-table__row">
-            {row.map((cell, cellIndex) => {
+            {row.cells.map((cell, cellIndex) => {
               const {
                 className: cellClassName,
                 children: cellChildren,
