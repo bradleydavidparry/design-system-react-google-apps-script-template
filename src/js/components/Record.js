@@ -1,26 +1,17 @@
 import React, { useState, useContext, useEffect } from 'react';
 import {
     useParams,
-    Link,
     useHistory,
     useLocation,
 } from "react-router-dom";
 import { 
     Button, 
-    Input, 
     Fieldset, 
-    Textarea, 
-    Select, 
-    Radios, 
-    DateInput, 
-    Checkboxes, 
     ErrorSummary, 
-    Table, 
-    Label,
-    InsetText
 } from '../../govuk/index';
-import { normalise, formatDateTime } from "../functions/utilities";
-import { formatValue } from '../functions/formatValue';
+import FormEntry from './FormEntry';
+import { normalise } from "../functions/utilities";
+import { getSubmitFunction } from '../functions/submitFunctions';
 import AppContext from '../views/AppContext';
 
 const getCurrentRecord = (data,recordId,query) => {
@@ -39,10 +30,19 @@ function useQuery() {
 
 export default function Record (props){
     let history = useHistory();
-    const { Fields, DataSheetName, includeBackButton, edittingPossible, creatingPossible, Schemas } = props;
+    const { 
+        Fields, 
+        DataSheetName, 
+        includeBackButton, 
+        edittingPossible, 
+        creatingPossible, 
+        Schemas, 
+        viewName, 
+        includeSideBar 
+    } = props;
     const { userType, dataObject, setDataObject, user }  = useContext(AppContext);
 
-    const {data, schema} = dataObject[Schemas];
+    const {data, schema} = dataObject[Schemas.split("#")[0]];
 
     let query = useQuery();
 
@@ -57,95 +57,18 @@ export default function Record (props){
         setFormData({...record})
     },[data,recordId]);
     
-    const splitFields = Fields === "All" ? Object.keys(schema) : Fields.split("#");
+    const splitFields = Fields === "All" ? Object.keys(schema).filter(field => field.indexOf("Created At") === -1 && field.indexOf("Created By") === -1 && field.indexOf("Updated At") === -1 && field.indexOf("Updated By") === -1) : Fields.split("#");
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        const newFormData = { ...formData };
-        newFormData[name] = value;
-        setFormData(newFormData)
+    function parseRevealCondition(revealConditionString){
+        const [field, listString] = revealConditionString.split("=");
+        const parsedList = JSON.parse(listString);
+        return [field,parsedList]
     }
 
-    const handleCheckboxChange = (e,fieldName) => {
-        const { value } = e.target;
-        const newFormData = { ...formData };
-        newFormData[fieldName] = value;
-        setFormData(newFormData)
-    }
-
-    const handleDateChange = (e,fieldName) => {
-        const { name, value } = e.target;
-        const period = name.replace(`${fieldName}-`);
-
-        const valueList = [
-            document.getElementById(`${fieldName}-year`).value,
-            document.getElementById(`${fieldName}-month`).value,
-            document.getElementById(`${fieldName}-day`).value
-        ];
-        
-        const periodList = ['year','month','day'];
-
-        valueList[periodList.indexOf(period)] = value;
-
-        const newFormData = { ...formData };
-
-        newFormData[fieldName] = valueList.every(period => period) ?  new Date(valueList.join("-")).toLocaleDateString() : '';
-        setFormData(newFormData);
-    }
-
-    const submit = () => {
-        setSubmitting(true);
-        
-        const newErrors = {};
-
-        splitFields.forEach(field => {
-            var normalisedFieldName = normalise(field)
-            if(schema[field].Required && !["Record List","Comment"].includes(schema[field].Type) && !formData[normalisedFieldName] && isRevealConditionMet(schema[field].RevealCondition)){
-                newErrors[normalisedFieldName] = `Please enter a value for ${field}`;
-            }
-        });
-
-        setErrors(newErrors);
-        
-        if(Object.keys(newErrors).length > 0){
-            setSubmitting(false);
-        } else {
-            const updateObject = {...formData}
-            const updateTime = formatDateTime(new Date());
-
-            for(let field in schema){
-                let normalisedFieldName = normalise(field)
-                if(schema[field].DefaultValue && !updateObject[normalisedFieldName]){
-                    updateObject[normalisedFieldName] = schema[field].DefaultValue;
-                }
-                if(schema[field].TimeStamp && updateObject[normalisedFieldName] !== record[normalisedFieldName]){
-                    updateObject[`${normalisedFieldName}UpdatedAt`] = updateTime;
-                    updateObject[`${normalisedFieldName}UpdatedBy`] = user;
-                }
-            }
-
-            if(!updateObject.ID){
-                updateObject.CreatedBy = user;
-                updateObject.CreatedAt = updateTime;
-            }
-
-            updateObject.UpdatedBy = user;
-            updateObject.UpdatedAt = updateTime;
-
-            const sheetName = extractSheetName(DataSheetName,updateObject);
-
-            google.script.run.withSuccessHandler((id) => {
-                const newDataObject = { ...dataObject };
-                newDataObject[Schemas].data = newDataObject[Schemas].data.filter(row => row.ID != id);
-                const newRecord = {...formData, ID: id}
-                newDataObject[Schemas].data.push(newRecord);
-                //if(recordId === "add_new") setFormData({});
-                setDataObject(newDataObject);
-                setSubmitting(false);
-            }).withFailureHandler((err) => {
-                console.log(err);
-            }).updateData({sheetName, updateObject});
-        }
+    function isRevealConditionMet(revealConditionString) {
+        if(!revealConditionString) return true;
+        const [field,parsedList] =  parseRevealCondition(revealConditionString);
+        return parsedList.includes(formData[normalise(field)]);
     }
 
     function extractSheetName(DataSheetName,updateObject){
@@ -162,257 +85,64 @@ export default function Record (props){
         return conditionObject[updateObject[normalise(conditionField)]];
     }
 
-    function parseRevealCondition(revealConditionString){
-        const [field, listString] = revealConditionString.split("=");
-        const parsedList = JSON.parse(listString);
-        return [field,parsedList]
-    }
-
-    function isRevealConditionMet(revealConditionString) {
-        if(!revealConditionString) return true;
-        const [field,parsedList] =  parseRevealCondition(revealConditionString);
-        return parsedList.includes(formData[normalise(field)]);
-    }
-
     const canEditView = (recordId !== "add_new" && edittingPossible) || (recordId === "add_new" && creatingPossible)
     
     const handleBackButtonClick = () => {
         history.goBack();
     }
 
+    const submitFunction = getSubmitFunction(viewName);
+
     return (
-        <>
-            { includeBackButton ?
-                <a className={"govuk-back-link"} href="#/" onClick={handleBackButtonClick}>Back</a>
-            : null }
-            <Fieldset>
-                {splitFields.map(fieldName => {
-                    const { Type, Hint: hint, Options, Update, Create, RevealCondition } = schema[fieldName];
-                    const normalisedFieldName = normalise(fieldName);
-
-                    const revealConditionMet = RevealCondition ? isRevealConditionMet(RevealCondition) : true;
-
-                    if(canEditView && ((recordId !== "add_new" && Update?.includes(userType)) || (recordId === "add_new" && Create?.includes(userType)))){
-                        if(revealConditionMet){
-                            switch(Type){
-                                case "Comment":
-                                    return <h3 key={fieldName} style={{marginBottom: "15px"}}>{fieldName}</h3>
-                                case "Text":
-                                    return (
-                                        <Input
-                                            id={normalisedFieldName}
-                                            hint={hint ? {children: hint} : null}
-                                            label={{
-                                                children: fieldName
-                                            }}
-                                            name={normalisedFieldName}
-                                            key={fieldName}
-                                            type="text"
-                                            value={formData[normalisedFieldName]}
-                                            onChange={handleChange}
-                                            errorMessage={errors[normalisedFieldName] ? ({children: "This is a required field"}) : null}
-                                            />
-                                    )
-                                case "Number":
-                                    return (
-                                        <Input
-                                            id={normalisedFieldName}
-                                            hint={hint ? {children: hint} : null}
-                                            label={{
-                                                children: fieldName
-                                            }}
-                                            name={normalisedFieldName}
-                                            key={fieldName}
-                                            type="number"
-                                            value={formData[normalisedFieldName]}
-                                            onChange={handleChange}
-                                            errorMessage={errors[normalisedFieldName] ? ({children: "This is a required field"}) : null}
-                                            />
-                                        )
-                                case "Currency":
-                                    return (
-                                        <Input
-                                            id={normalisedFieldName}
-                                            hint={hint ? {children: hint} : null}
-                                            label={{
-                                                children: fieldName
-                                            }}
-                                            name={normalisedFieldName}
-                                            key={fieldName}
-                                            type="number"
-                                            prefix={{
-                                                children: '£'
-                                            }}
-                                            value={formData[normalisedFieldName]}
-                                            onChange={handleChange}
-                                            errorMessage={errors[normalisedFieldName] ? ({children: "This is a required field"}) : null}
-                                            />
-                                        )
-                                case "Text Area":
-                                    return (
-                                        <Textarea
-                                            id={normalisedFieldName}
-                                            hint={hint ? {children: hint} : null}
-                                            label={{
-                                                children: fieldName
-                                            }}
-                                            name={normalisedFieldName}
-                                            key={fieldName}
-                                            value={formData[normalisedFieldName]}
-                                            onChange={handleChange}
-                                            errorMessage={errors[normalisedFieldName] ? ({children: "This is a required field"}) : null}
-                                            />
-                                    )
-                                case "Select":
-                                    return (
-                                        <Select
-                                            id={normalisedFieldName}
-                                            errorMessage={errors[normalisedFieldName] ? ({children: "This is a required field"}) : null}
-                                            hint={hint ? {children: hint} : null}
-                                            items={Options.map(option => option.children ? option : ({children: option, value: option }))}
-                                            label={{
-                                                children: fieldName
-                                            }}
-                                            value={formData[normalisedFieldName]}
-                                            onChange={handleChange}
-                                            name={normalisedFieldName}
-                                            key={fieldName}
-                                            />
-                                    )
-                                case "Radio":
-                                    return (
-                                        <Radios
-                                            id={normalisedFieldName}
-                                            fieldset={{
-                                                legend: {
-                                                children: fieldName
-                                                }
-                                            }}
-                                            formGroup={{
-                                                className: 'govuk-radios--small'
-                                            }}
-                                            items={Options.map(option => ({children: option, value: option }))}
-                                            name={normalisedFieldName}
-                                            value={formData[normalisedFieldName]}
-                                            onChange={handleChange}
-                                            key={fieldName}
-                                            errorMessage={errors[normalisedFieldName] ? ({children: "This is a required field"}) : null}
-                                            />
-                                    )
-                                case "Checkbox":
-                                    return (
-                                        <Checkboxes
-                                            id={normalisedFieldName}
-                                            fieldset={{
-                                                legend: {
-                                                children: fieldName
-                                                }
-                                            }}
-                                            hint={hint ? {children: hint} : null}
-                                            items={Options.map(option => ({
-                                                children: option, 
-                                                value: option,
-                                                name: option,
-                                                checked: formData[normalisedFieldName] === option
-                                            }))}
-                                            name={normalisedFieldName}
-                                            onChange={(e) => handleCheckboxChange(e,normalisedFieldName)}
-                                            errorMessage={errors[normalisedFieldName] ? ({children: "This is a required field"}) : null}
-                                            />
-                                    )
-                                case "Date":
-                                    const date = formData[normalisedFieldName] ? new Date(formData[normalisedFieldName]) : "";
-                                    const [day,month,year] = date ? [date.getDate(),date.getMonth() + 1,date.getFullYear()] : ['','',''];
-                                    return (
-                                        <DateInput
-                                            fieldset={{
-                                                legend: {
-                                                children: fieldName
-                                                }
-                                            }}
-                                            hint={hint ? {children: hint} : null}
-                                            namePrefix={normalisedFieldName}
-                                            id={normalisedFieldName}
-                                            day={day}
-                                            month={month}
-                                            year={year}
-                                            onChange={(e) => handleDateChange(e,normalisedFieldName)}
-                                            errorMessage={errors[normalisedFieldName] ? ({children: "This is a required field"}) : null}
-                                            />
-                                    )
-                                case "Record List":
-                                    if(recordId === "add_new") return null;
-                                    const optionsString = schema[fieldName].Options;
-                                    const [schemaName, filterColumn, path , create, createPath, ...fields] = optionsString.slice(1);
-                                    const normalisedFilterColumn = normalise(filterColumn);
-                                    const listData = dataObject[schemaName].data.filter(row => row[normalisedFilterColumn] == recordId);
-                                    
-                                    const onClickSubTableButton = () => {
-                                        history.push(`${createPath}?${normalisedFilterColumn}=${formData.ID}`);
-                                    }
-
-                                    return (
-                                        <div className="govuk-form-group">
-                                            {listData.length === 0 ? <Label>{fieldName}</Label> : null}
-                                            {listData.length > 0 ? 
-                                                <Table
-                                                    firstCellIsHeader
-                                                    caption={fieldName}
-                                                    captionClassName="govuk-heading-m"
-                                                    head={fields.concat(["",""]).map((heading) => { return { children: heading }}) }
-                                                    rows={listData.map(row => (
-                                                            { cells: fields.map(heading => (
-                                                                {children: formatValue(row[normalise(heading)],dataObject[schemaName].schema[heading].Type)}
-                                                                )).concat({children: (
-                                                                <Link className={"govuk-link"} to={`${path}${row.ID}`} >
-                                                                    View
-                                                                </Link>)})
-                                                            }))
-                                                        }
-                                                    />
-                                             : null}
-                                            {create === "Create" ? 
-                                                <Button onClick={onClickSubTableButton}>Create New {fieldName.substring(0, fieldName.length - 1)}</Button>
-                                            : null}
-                                        </div>
-                                    );
-                                default:
-                                    return (
-                                        <Input
-                                            id={normalisedFieldName}
-                                            hint={hint ? {children: hint} : null}
-                                            label={{
-                                                children: fieldName
-                                            }}
-                                            name={normalisedFieldName}
-                                            key={fieldName}
-                                            type="text"
-                                            value={formData[normalisedFieldName]}
-                                            onChange={handleChange}
-                                            errorMessage={errors[normalisedFieldName] ? ({children: "This is a required field"}) : null}
-                                            />
-                                    )
-                            }
+        <div className="govuk-grid-row">
+            <div className={includeSideBar ? "govuk-grid-column-two-thirds" : "govuk-grid-column-full"}>
+                { includeBackButton ?
+                    <a className={"govuk-back-link"} href="#/" onClick={handleBackButtonClick}>Back</a>
+                : null }
+                <Fieldset>
+                    {splitFields.map(fieldName => {
+                        const FormEntryProps = {
+                            ...schema[fieldName],
+                            canEditView,
+                            fieldName,
+                            userType,
+                            formData,
+                            setFormData,
+                            errors,
+                            recordId,
+                            schema,
+                            dataObject,
+                            history,
+                            key: fieldName,
+                            parseRevealCondition,
+                            isRevealConditionMet
                         }
-                    } else {
-                        if(!formData[normalisedFieldName]) return null;
-                        return (
-                            <div className="govuk-form-group">
-                                <Label>{fieldName}</Label>
-                                <p id="FullName" name="FullName">{formatValue(formData[normalisedFieldName],schema[fieldName].Type)}</p>
-                            </div>
-                        )
-                    }
-                })}
-                
-                {Object.keys(errors).length > 0 ? 
-                    <ErrorSummary
-                    errorList={Object.keys(errors).map((error,index) => ({children: Object.values(errors)[index], href: `#${error}` }))}
-                    titleChildren="There is a problem"
-                    /> : null}
-                {canEditView ? <Button onClick={submit} disabled={submitting}>{formData.ID ? "Update" : "Create"}</Button> : null }
-            </Fieldset>
-        </>
+                        return <FormEntry {...FormEntryProps} /> 
+                    })}
+                    {Object.keys(errors).length > 0 ? 
+                        <ErrorSummary
+                        errorList={Object.keys(errors).map((error,index) => ({children: Object.values(errors)[index], href: `#${error}` }))}
+                        titleChildren="There is a problem"
+                        /> : null}
+                    {canEditView ? <Button onClick={() => submitFunction(
+                        {setSubmitting,
+                        splitFields,
+                        normalise,
+                        schema,
+                        formData,
+                        isRevealConditionMet, 
+                        setErrors, 
+                        user, 
+                        dataObject, 
+                        Schemas, 
+                        setDataObject, 
+                        extractSheetName, 
+                        DataSheetName,
+                        record
+                        })} disabled={submitting}>{formData.ID ? "Update" : "Create"}</Button> : null }
+                </Fieldset>
+            </div>
+        </div>
     )
 }
 

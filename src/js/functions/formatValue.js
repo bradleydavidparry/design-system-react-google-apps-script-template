@@ -9,6 +9,8 @@ function formatValue(input,type){
             return formatDate(input);
         case "DateTime":
             return formatDateTime(input);
+        case "Checkbox":
+            return input.split("#").join(", ");
         case "EmailToName":
             return emailToName(input);
         default:

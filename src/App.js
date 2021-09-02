@@ -6,7 +6,7 @@ import {
   Redirect
 } from "react-router-dom";
 import AppContext from './js/views/AppContext';
-import processStructureData from './js/functions/dataProcessing';
+import { processStructureData } from './js/functions/dataProcessing';
 import linkifyName from './js/functions/linkifyName';
 import { Template } from './govuk/index';
 import Section from './js/components/Section';
@@ -18,8 +18,9 @@ function App(){
     const [sections,setSections] = useState([]);
     const [defaultSection, setDefaultSection] = useState(null);
     const [pageTitle, setPageTitle] = useState("");
-    const [dataObject, setDataObject] = useState([]);
+    const [dataObject, setDataObject] = useState({});
     const [filterObject, setFilterObject] = useState({filters: {}, "Search Bar": "", sort: {field: null, dir: 1}});
+    const [lookups, setLookups] = useState({});
     
     const value = {
       dataObject,
@@ -30,7 +31,8 @@ function App(){
       loading,
       filterObject,
       setFilterObject,
-      user
+      user,
+      lookups
     }
     
     useEffect(() => {
@@ -38,13 +40,13 @@ function App(){
           .withSuccessHandler(processStructureData)
           .withUserObject(
             {
-              setDataObject,
               setSections,
               setUserType,
               linkifyName,
               setDefaultSection,
               setUser,
-              setLoading
+              setLoading,
+              setLookups
             }
           )
           .getStructureData();
@@ -54,7 +56,7 @@ function App(){
       title: loading ? "Fetching data" : pageTitle,
       strapline: '',
       header: {
-        serviceName:"Web App Title",
+        serviceName:"Central Governance Tool",
         sections
       },
       footer: {},

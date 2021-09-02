@@ -29,4 +29,5 @@ export * from './components/tabs';
 export * from './components/tag';
 export * from './components/textarea';
 export * from './components/warning-text';
+export * from './components/datalist';
 export * from './template';

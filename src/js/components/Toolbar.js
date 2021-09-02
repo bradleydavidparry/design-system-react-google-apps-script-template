@@ -88,7 +88,7 @@ function Toolbar(props){
                                     <Input
                                         label={{ children: 'Search Bar' }}
                                         name="search-bar"
-                                        type="text"
+                                        type="search"
                                         value={filterObject["Search Bar"]}
                                         onChange={handleSearchBarChange}
                                         />

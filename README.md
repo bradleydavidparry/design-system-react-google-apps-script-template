@@ -21,7 +21,7 @@ Open terminal and clone this project.
 You have to create an Apps Script project to run this code.
 
 ```bash
-clasp create --type standalone --title "GDS Invoicing Tool"
+clasp create --type standalone --title "Web App Template"
 ```
 
 Now build the project and upload to your newly created Apps Script project

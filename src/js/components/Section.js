@@ -22,21 +22,23 @@ export default function Section(props){
     
     const [notificationsObject, setnotificationsObject] = useState({});
 
+    const includeSideBar = views.length > 1;
+
     return (
         <div className="browse">
             <div className="browse-panes section" data-state="section" data-module="gem-track-click" aria-busy="false">
-                <div id="section" className="section-pane pane with-sort" style={{margin: "0px", width: views.length > 1 ? "75%" : "100%"}}>
+                <div id="section" className="section-pane pane with-sort" style={{margin: "0px", width: includeSideBar ? "75%" : "100%"}}>
                     <div className="pane-inner curated">
                         <Switch>
                             <Route exact path={`/${linkifyName(name)}/`} render={() =>  <Redirect to={`${linkifyName(name)}/${linkifyName(views[0].Name)}`} />} />
                             { views.map(view => (
                                 <Route key={view.Name} path={`/${linkifyName(name)}/${linkifyName(view.Name)}`}>
-                                    <View {...view} />
+                                    <View {...view} {...includeSideBar}/>
                                 </Route>)) }
                         </Switch>
                     </div>
                 </div>
-                { views.length > 1 ? 
+                { includeSideBar ? 
                     <div id="root" className="pane root-pane">
                         <h2 className="govuk-visually-hidden">Browse views in {name}</h2>
                         <ul>

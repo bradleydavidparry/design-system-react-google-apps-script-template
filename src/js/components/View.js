@@ -2,6 +2,8 @@ import React, { useContext, useState, useEffect } from 'react';
 import { Table } from '../../govuk/index';
 import Toolbar from './Toolbar';
 import Record from './Record';
+import ViewComponent from './ViewComponent';
+//import Record from './Record';
 import ErrorBoundary from './ErrorBoundary';
 import {
     Switch,
@@ -12,6 +14,7 @@ import {
   } from "react-router-dom";
 import { normalise } from '../functions/utilities';
 import { formatValue } from '../functions/formatValue';
+import { processViewData, extractOptionsFromSchema, processDataAndSchema } from '../functions/dataProcessing'; 
 import AppContext from '../views/AppContext';
 
 function createViewFilterObject(inputString){
@@ -34,7 +37,6 @@ function View(props){
         Schemas,
         Fields,
         VisibleFields,
-        SearchFields,
         FilterFields,
         SortFields,
         IdentifyingField,
@@ -44,14 +46,42 @@ function View(props){
         EditUserTypes,
         ViewFilter,
         IncludeLinkInSideBar,
+        includeSideBar,
     } = props;
-
+    
     let match = useRouteMatch();
-    
     const { userType, filterObject, setFilterObject }  = useContext(AppContext);
-    const { dataObject }  = useContext(AppContext);
-    const { data, schema }  = dataObject[Schemas];
+    const { dataObject, setDataObject }  = useContext(AppContext);
+
+    const [ viewLoading, setViewLoading ] = useState(true);
     
+    const [data, setData] = useState([]);
+    const [schema, setSchema] = useState({});
+
+    useEffect(() => {
+        const splitSchemas = Schemas.split("#");
+        const schemasToFetch = splitSchemas.filter(schemaName => !dataObject[schemaName]);
+        if(schemasToFetch.length > 0){
+            google.script.run
+                .withSuccessHandler(processViewData)
+                .withUserObject({ dataObject, setDataObject })
+                .getViewData(schemasToFetch);
+        }
+    },[dataObject,setDataObject,Schemas]);
+
+    useEffect(() => {
+        const splitSchemas = Schemas.split("#");
+        if(splitSchemas.every(schemaName => dataObject[schemaName])){
+            
+            const [processedData, processedSchema] = processDataAndSchema(Name,dataObject,splitSchemas)
+            
+            setData(processedData);
+            setSchema(processedSchema);
+
+            setViewLoading(false);
+        }
+    },[dataObject,setData,setSchema,Schemas]);
+
     const headings = VisibleFields?.split("#");
 
     const filterFieldsList = FilterFields?.split("#").map(field => normalise(field));
@@ -95,7 +125,8 @@ function View(props){
         create: CreateUserTypes?.includes(userType),
         Name
     }
-
+    
+    if(viewLoading) return <h2>Loading</h2>
     return (
         <>
             <h2>{Name}</h2>
@@ -109,27 +140,30 @@ function View(props){
                             edittingPossible={edittingPossible}
                             creatingPossible={creatingPossible}
                             Schemas={Schemas}
+                            viewName={Name}
+                            includeSideBar={includeSideBar}
                             />
                     </Route>
                     <Route path={`${match.path}`}>
                         {includeIndexPage ? (
                             <>
-                            <Toolbar {...toolbarProps} />
-                            <Table
-                                firstCellIsHeader
-                                caption={"Filter and search results"}
-                                captionClassName="govuk-heading-s"
-                                head={headings.concat(["",""]).map((heading) => { return { children: heading }}) }
-                                rows={filteredAndSortedData.map(row => (
-                                        { cells: headings.map(heading => (
-                                            {children: formatValue(row[normalise(heading)],schema[heading].Type)}
-                                            )).concat({children: (
-                                            <Link className={"govuk-link"} to={`${match.url}/${row.ID}`} >
-                                                View<span className="govuk-visually-hidden"> {row[normalise(IdentifyingField)]}</span>
-                                            </Link>)})
-                                        }))
-                                    }
-                                />
+                                <Toolbar {...toolbarProps} />
+                                <ViewComponent Name={Name} data={filteredAndSortedData} />
+                                <Table
+                                    firstCellIsHeader
+                                    caption={"Filter and search results"}
+                                    captionClassName="govuk-heading-s"
+                                    head={headings.concat(["",""]).map((heading) => { return { children: heading }}) }
+                                    rows={filteredAndSortedData.map(row => (
+                                            { cells: headings.map(heading => (
+                                                {children: formatValue(row[normalise(heading)],schema[heading].Type)}
+                                                )).concat({children: (
+                                                <Link className={"govuk-link"} to={`${match.url}/${row.ID}`} >
+                                                    View<span className="govuk-visually-hidden"> {row[normalise(IdentifyingField)]}</span>
+                                                </Link>)})
+                                            }))
+                                        }
+                                    />
                             </> ) :
                             <Redirect to={`${match.path}/add_new`} />
                         }
