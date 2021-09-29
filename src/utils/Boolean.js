@@ -1,8 +1,8 @@
-import React, { useEffect, useRef } from 'react';
-import { ErrorMessage, Fieldset, Hint, Label } from '../govuk';
-import omit from './omitKey';
-import RadiosJS from 'govuk-frontend/govuk/components/radios/radios';
-import CheckboxesJS from 'govuk-frontend/govuk/components/checkboxes/checkboxes';
+import React, { useEffect, useRef } from "react";
+import { ErrorMessage, Fieldset, Hint, Label } from "../govuk";
+import omit from "./omitKey";
+import RadiosJS from "govuk-frontend/govuk/components/radios/radios";
+import CheckboxesJS from "govuk-frontend/govuk/components/checkboxes/checkboxes";
 
 function Boolean(props) {
   const {
@@ -17,59 +17,26 @@ function Boolean(props) {
     name,
     onChange,
     onBlur,
-    'aria-describedby': describedByProp,
+    "aria-describedby": describedByProp,
     ...attributes
   } = props;
 
   const controlRef = useRef();
   const idPrefixValue = idPrefix || name;
-  let describedBy = describedByProp || '';
-  if (fieldset?.['aria-describedby']) {
-    describedBy = fieldset['aria-describedby'];
+  let describedBy = describedByProp || "";
+  if (fieldset?.["aria-describedby"]) {
+    describedBy = fieldset["aria-describedby"];
   }
 
   let hintComponent;
   let errorMessageComponent;
 
-  // useEffect(() => {
-  //   (async () => {
-  //     switch (controlType) {
-  //       case 'radios':
-  //         if (typeof document !== 'undefined') {
-  //           const { default: RadiosJS } = await import(
-  //             /* webpackChunkName: "govuk-frontend-radios" */
-  //             /* webpackMode: "lazy" */
-  //             /* webpackPrefetch: true */
-  //             'govuk-frontend/govuk/components/radios/radios'
-  //           );
-
-  //           new RadiosJS(controlRef.current).init();
-  //         }
-  //         break;
-  //       case 'checkboxes':
-  //         if (typeof document !== 'undefined') {
-  //           const { default: CheckboxesJS } = await import(
-  //             /* webpackChunkName: "govuk-frontend-checkboxes" */
-  //             /* webpackMode: "lazy" */
-  //             /* webpackPrefetch: true */
-  //             'govuk-frontend/govuk/components/checkboxes/checkboxes'
-  //           );
-
-  //           new CheckboxesJS(controlRef.current).init();
-  //         }
-  //         break;
-
-  //       default:
-  //     }
-  //   })();
-  // }, [controlRef, controlType]);
-
   useEffect(() => {
     switch (controlType) {
-      case 'radios':
+      case "radios":
         new RadiosJS(controlRef.current).init();
         break;
-      case 'checkboxes':
+      case "checkboxes":
         new CheckboxesJS(controlRef.current).init();
         break;
       default:
@@ -101,10 +68,10 @@ function Boolean(props) {
 
       <div
         className={`govuk-${controlType} ${
-          controlType === 'radios' && isConditional
+          controlType === "radios" && isConditional
             ? `govuk-${controlType}--conditional`
-            : ''
-        } ${className || ''}`}
+            : ""
+        } ${className || ""}`}
         {...attributes}
         ref={controlRef}
         data-module={isConditional ? `govuk-${controlType}` : null}
@@ -126,16 +93,16 @@ function Boolean(props) {
 
             const idSuffix = `-${index + 1}`;
             const idValue =
-              id || `${idPrefixValue}${index === 0 ? '' : idSuffix}`;
+              id || `${idPrefixValue}${index === 0 ? "" : idSuffix}`;
             const nameValue = item.name ? item.name : name;
             const conditionalId = itemConditional?.children
               ? `conditional-${idValue}`
               : null;
             const itemHintId = `${idValue}-item-hint`;
 
-            let itemDescribedBy = '';
+            let itemDescribedBy = "";
 
-            if (controlType === 'checkboxes' && !hasFieldset) {
+            if (controlType === "checkboxes" && !hasFieldset) {
               itemDescribedBy = describedBy;
             }
 
@@ -161,7 +128,7 @@ function Boolean(props) {
                     className={`govuk-${controlType}__input`}
                     id={idValue}
                     name={nameValue}
-                    type={controlType === 'radios' ? 'radio' : 'checkbox'}
+                    type={controlType === "radios" ? "radio" : "checkbox"}
                     data-aria-controls={conditionalId}
                     aria-describedby={itemDescribedBy || null}
                     onChange={onChange}
@@ -172,7 +139,7 @@ function Boolean(props) {
                     {...{
                       ...label,
                       className: `govuk-${controlType}__label ${
-                        label?.className || ''
+                        label?.className || ""
                       }`,
                       htmlFor: idValue,
                       isPageHeading: false,
@@ -185,13 +152,13 @@ function Boolean(props) {
                       {...{
                         ...itemHint,
                         className: `govuk-${controlType}__hint ${
-                          itemHint.className || ''
+                          itemHint.className || ""
                         }`,
                       }}
                       id={itemHintId}
                     />
                   ) : (
-                    ''
+                    ""
                   )}
                 </div>
 
@@ -199,7 +166,7 @@ function Boolean(props) {
                   <div
                     className={`govuk-${controlType}__conditional ${
                       item.checked
-                        ? ''
+                        ? ""
                         : `govuk-${controlType}__conditional--hidden`
                     }`}
                     id={conditionalId}
@@ -207,7 +174,7 @@ function Boolean(props) {
                     {itemConditional.children}
                   </div>
                 ) : (
-                  ''
+                  ""
                 )}
               </React.Fragment>
             );
@@ -219,12 +186,12 @@ function Boolean(props) {
   return (
     <div
       className={`govuk-form-group${
-        errorMessage ? ' govuk-form-group--error' : ''
-      } ${formGroup?.className || ''}`}
+        errorMessage ? " govuk-form-group--error" : ""
+      } ${formGroup?.className || ""}`}
     >
       {hasFieldset ? (
         <Fieldset
-          {...omit(fieldset, 'role')}
+          {...omit(fieldset, "role")}
           aria-describedby={describedBy.trim() || null}
         >
           {innerHtml}

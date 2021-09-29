@@ -1,7 +1,8 @@
 import React from 'react';
 import { Label, Hint, ErrorMessage } from '../..';
+import Autocomplete from 'accessible-autocomplete/react';
 
-const Input = React.forwardRef((props, ref) => {
+const DataList = React.forwardRef((props, ref) => {
   const {
     className,
     'aria-describedby': describedBy,
@@ -14,6 +15,7 @@ const Input = React.forwardRef((props, ref) => {
     prefix,
     suffix,
     value,
+    disabled,
     ...attributes
   } = props;
 
@@ -34,7 +36,7 @@ const Input = React.forwardRef((props, ref) => {
   }
 
   const input = (
-    <input
+    <Autocomplete
       ref={ref}
       id={id}
       className={`govuk-input ${className || ''} ${
@@ -43,6 +45,7 @@ const Input = React.forwardRef((props, ref) => {
       name={name || id}
       value={value}
       aria-describedby={describedByValue || null}
+      disabled={disabled}
       {...attributes}
     />
   );
@@ -91,10 +94,10 @@ const Input = React.forwardRef((props, ref) => {
   );
 });
 
-Input.displayName = 'Input';
+DataList.displayName = 'DataList';
 
-Input.defaultProps = {
+DataList.defaultProps = {
   type: 'text',
 };
 
-export { Input };
+export { DataList };

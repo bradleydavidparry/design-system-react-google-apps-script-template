@@ -1,21 +1,17 @@
 function doGet(e) {
     var template = HtmlService.createTemplateFromFile('index');
 
-    var permissions = createPermissionsDict();
-
     var user = Session.getActiveUser().getEmail();
 
     if(user !== "bradley.parry@digital.cabinet-office.gov.uk"){
-        var sheet = SpreadsheetApp.openById(trackingSheetId).getSheetByName("Invoicing Tool");
+        var sheet = SpreadsheetApp.openById(trackingSheetId).getSheetByName("Central Governance Tool");
         sheet.appendRow([user.replace("@digital.cabinet-office.gov.uk","").replace("."," "),new Date()]);
     }
 
-    if(permissions[user]){
-        return template.evaluate()
-            .setTitle('Central Governance Tool')
-            .setSandboxMode(HtmlService.SandboxMode.IFRAME)
-            .setFaviconUrl("https://jobs.mindtheproduct.com/wp-content/uploads/company_logos/2017/03/gds-logo.png");
-    }
+    return template.evaluate()
+        .setTitle('Central Governance Tool')
+        .setSandboxMode(HtmlService.SandboxMode.IFRAME)
+        .setFaviconUrl("https://jobs.mindtheproduct.com/wp-content/uploads/company_logos/2017/03/gds-logo.png");
 }
 
 function getStructureData(){
@@ -23,23 +19,37 @@ function getStructureData(){
     var validation = getRows( open(validationSpreadsheetId), "Validation");
     
     const user = Session.getActiveUser().getEmail();
-    const {RoleType: userType } = getRows( db, 'Permissions', [], {UserEmail: user} )[0];
+    const permissionData = getRows( db, 'Permissions', [], {UserEmail: user} );
+    let userType = permissionData[0] ? permissionData[0].RoleType : "GDS User";
+    const accessibleMode = permissionData[0] ? permissionData[0].AccessibleMode : true;
     const views = getRows( db, "Views");
-    const defaultSection = getRows( db, "User Types", [], { "UserType": userType }, 1);
+    const splitUserTypes = userType.split("#");
+    const primaryUserType = splitUserTypes[0];
+    const defaultSection = getRows( db, "User Types", [], { "UserType": primaryUserType }, 1);
+    const currentUserData = getRows( db, "Civil Servants",["Team","Community","Full Name"], { "Email": user })?.[0];
 
-    return JSON.stringify({ views, user, userType, defaultSection, validation});
+    return JSON.stringify({ views, user, userType: splitUserTypes.join("#"), defaultSection, validation, accessibleMode, currentUserData});
+}
+
+function checkUserAccess(userTypesAccessString,userTypeListString){
+    if(userTypeListString === "Master") return true;
+    const userTypes = userTypeListString.split("#");
+    return userTypes.some(type => userTypesAccessString.includes(type));
 }
 
 function getViewData(schemasToFetch){
     var db = open(currentSpreadsheetId);
     const user = Session.getActiveUser().getEmail();
-
-    const { Group, Team } = getRows( db, 'Permissions', [], {UserEmail: user} )[0];
+    
+    const userData = getRows( db, 'Permissions', [], {UserEmail: user} )
+    const { Group, Team, RoleType } = userData[0] ? userData[0] : {Group: "null", Team: "null", RoleType: "GDS User"};
 
     var validation = getRows( open(validationSpreadsheetId), "Validation");
     const returnObject = {validation}
 
     for(let schemaName of schemasToFetch) {
+        let schema;
+        let columns;
         switch(schemaName){
             case "New Vacancy Business Case":
                 returnObject[schemaName] = {
@@ -62,29 +72,55 @@ function getViewData(schemasToFetch){
                 }
                 break;
             case "CS Schema":
+                schema = getRows( db, schemaName);
+                columns = [...schema].filter(row => checkUserAccess(`${row.Create}${row.Read}${row.Update}`,RoleType)).map(row => normalize_(row.Field));
                 returnObject[schemaName] = {
-                    data: getRows( db, "Civil Servants")
+                    data: getRows( db, "Civil Servants",["ID",...columns,"CreatedBy","CreatedAt","UpdatedBy","UpdatedAt"])
                             .filter(row => (Group === "All" || Group.includes(row.Group)) && (Team === "All" || Team.includes(row.Team))),
-                    schema: getRows( db, schemaName),
+                    schema: schema,
+                }
+                break;
+            case "SOP Schema":
+                schema = getRows( db, schemaName);
+                columns = [...schema].filter(row => checkUserAccess(`${row.Create}${row.Read}${row.Update}`,RoleType)).map(row => normalize_(row.Field));
+                returnObject[schemaName] = {
+                    data: getRows( db, "SOP",["ID",...columns]),
+                    schema: schema,
                 }
                 break;
             case "Contractors Schema":
+                schema = getRows( db, schemaName);
+                columns = [...schema].filter(row => checkUserAccess(`${row.Create}${row.Read}${row.Update}`,RoleType)).map(row => normalize_(row.Field));
                 returnObject[schemaName] = {
-                    data: getRows( db, "Contractors")
+                    data: getRows( db, "Contractors",["ID",...columns,"CreatedBy","CreatedAt","UpdatedBy","UpdatedAt"])
                             .filter(row => (Group === "All" || Group.includes(row.Group)) && (Team === "All" || Team.includes(row.Team))),
-                    schema: getRows( db, schemaName),
+                    schema: schema,
                 }
                 break;
             case "L&D Schema":
                 returnObject[schemaName] = {
                     data: getRows( db, "L&D Requests")
-                            .filter(row => (Group === "All" || Group.includes(row.BusinessUnit)) && (Team === "All" || Team.includes(row.Team))),
+                            .filter(row => ((Group === "All" || Group.includes(row.BusinessUnit)) && (Team === "All" || Team.includes(row.Team))) || user === row.CreatedBy),
                     schema: getRows( db, schemaName),
                 }
                 break;
             case "Workforce Plan Schema":
                 returnObject[schemaName] = {
                     data: getRows( db, "Workforce Plan")
+                            .filter(row => (Group === "All" || Group.includes(row.Group)) && (Team === "All" || Team.includes(row.Team))),
+                    schema: getRows( db, schemaName),
+                }
+                break;
+            case "Workforce Plan Changes Schema":
+                returnObject[schemaName] = {
+                    data: getRows( db, "Workforce Plan Changes")
+                            .filter(row => (Group === "All" || Group.includes(row.Group)) && (Team === "All" || Team.includes(row.Team))),
+                    schema: getRows( db, schemaName),
+                }
+                break;
+            case "Deliverables Schema":
+                returnObject[schemaName] = {
+                    data: getRows( db, "Deliverables")
                             .filter(row => (Group === "All" || Group.includes(row.Group)) && (Team === "All" || Team.includes(row.Team))),
                     schema: getRows( db, schemaName),
                 }
@@ -130,7 +166,10 @@ function setSheetCodes(){
         "Contractors": "CN00000",
         "CS Vacancies" : "CSVAC0000",
         "Contractor Vacancies": "CNVAC0000",
-        "L&D Requests": "LD00000"
+        "L&D Requests": "LD00000",
+        "Deliverables": "D00000",
+        "Workforce Plan Changes": "WPC00000",
+        "Workforce Plan": "GDS00000",
     }
 
     for(const sheetName in codeObject){
@@ -140,11 +179,13 @@ function setSheetCodes(){
 
 function buildAllDatabases(){
     const schemaObject = {
-        "CS Schema": "Civil Servants",
+        //"CS Schema": "Civil Servants",
         //"Contractors Schema": "Contractors",
         //"CS Vacancies Schema" : "CS Vacancies",
         //"Contractor Vacancies Schema": "Contractor Vacancies",
         //"L&D Schema": "L&D Requests"
+        //"Deliverables Schema": "Deliverables",
+        //"Workforce Plan Changes Schema": "Workforce Plan Changes"
     }
 
     for(var schema in schemaObject){

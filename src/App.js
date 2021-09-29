@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
-  HashRouter as Router,
+  // HashRouter as Router,
+  BrowserRouter as Router,
   Switch,
   Route,
   Redirect
@@ -21,6 +22,8 @@ function App(){
     const [dataObject, setDataObject] = useState({});
     const [filterObject, setFilterObject] = useState({filters: {}, "Search Bar": "", sort: {field: null, dir: 1}});
     const [lookups, setLookups] = useState({});
+    const [accessibleMode, setAccessibleMode] = useState(true);
+    const [currentUserData, setCurrentUserData] = useState({});
     
     const value = {
       dataObject,
@@ -32,7 +35,10 @@ function App(){
       filterObject,
       setFilterObject,
       user,
-      lookups
+      lookups,
+      setLookups,
+      accessibleMode,
+      currentUserData
     }
     
     useEffect(() => {
@@ -46,7 +52,9 @@ function App(){
               setDefaultSection,
               setUser,
               setLoading,
-              setLookups
+              setLookups,
+              setAccessibleMode,
+              setCurrentUserData
             }
           )
           .getStructureData();
@@ -67,7 +75,7 @@ function App(){
               <Router>
                 <Template {...templateProps}>
                   <Switch>
-                    <Route exact path="/" render={() =>  <Redirect to={`${defaultSection}`} />} />
+                    <Route exact path="/userCodeAppPanel" render={() =>  <Redirect to={`${defaultSection}`} />} />
                     {Object.keys(sections).map(section => (
                       <Route key={section} path={`/${linkifyName(section)}`}>
                         <Section views={sections[section]} name={section} />

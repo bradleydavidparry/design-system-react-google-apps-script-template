@@ -15,6 +15,7 @@ function DateInput(props) {
     day,
     month,
     year,
+    disabled,
     ...attributes
   } = props;
 
@@ -97,6 +98,7 @@ function DateInput(props) {
             type="text"
             inputMode={itemInputMode || 'numeric'}
             pattern={itemPattern || '[0-9]*'}
+            disabled={disabled}
           />
         </div>
       );

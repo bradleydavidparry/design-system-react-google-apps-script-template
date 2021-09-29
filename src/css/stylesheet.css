@@ -9,3 +9,18 @@
 caption {
   caption-side: top;
 }
+
+.back-button {
+  background: none;
+  border: none;
+
+  /*optional*/
+  cursor: pointer;
+}
+.back-button:hover {
+  text-decoration: underline;
+}
+
+.highlight-row {
+  background-color: #f4cccc;
+}

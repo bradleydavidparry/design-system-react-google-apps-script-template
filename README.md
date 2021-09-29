@@ -30,3 +30,12 @@ Now build the project and upload to your newly created Apps Script project
 npm install
 npm run deploy
 ```
+
+Create a file in the directory called urls.js and add the following string IDs to it.
+
+```js
+//urls.js
+const trackingSheetId = <TRACKING_SHEET_ID>;
+const currentSpreadsheetId = <CURRENT_SHEET_ID>;
+const validationSpreadsheetId = <VALIDATION_SHEET_ID>;
+```
