@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
+import InternalMoves from "./custom/InternalMoves";
 import {
   Button,
   Input,
@@ -13,8 +14,13 @@ import {
   DataList,
 } from "../../govuk/index";
 import FormatValue from "../functions/FormatValue";
-import { normalise, checkUserAccess } from "../functions/utilities";
+import {
+  normalise,
+  checkUserAccess,
+  parseFilterString,
+} from "../functions/utilities";
 import { lookupViewValue } from "../functions/dataProcessing";
+import HtmlTemplates from "./HtmlTemplates";
 import "../../css/autocomplete.css";
 
 function FormEntry(props) {
@@ -39,6 +45,7 @@ function FormEntry(props) {
     isRevealConditionMet,
     viewName,
     submitting,
+    lookups,
   } = props;
 
   const normalisedFieldName = normalise(fieldName);
@@ -103,7 +110,8 @@ function FormEntry(props) {
     identifier,
     data,
     viewName,
-    schemaName
+    schemaName,
+    filterObject
   ) {
     if (
       viewName === "Create New Vacancy" &&
@@ -117,9 +125,23 @@ function FormEntry(props) {
           .map((row) => ({ value: row[value], children: row[identifier] }))
       );
     }
-
     return [""].concat(
-      data.map((row) => ({ value: row[value], children: row[identifier] }))
+      data
+        .filter((row) => {
+          for (let filterField in filterObject.include) {
+            if (!filterObject.include[filterField].includes(row[filterField]))
+              return false;
+          }
+
+          for (let filterField in filterObject.exclude) {
+            if (filterObject.exclude[filterField].includes(row[filterField]))
+              return false;
+          }
+          return true;
+        })
+        .map((row) => {
+          return { value: row[value], children: row[identifier] };
+        })
     );
   }
 
@@ -133,14 +155,16 @@ function FormEntry(props) {
       if (revealConditionMet) {
         let processedOptions;
         if (OptionsSchema) {
-          const [sourceSchemaName, value, identifier] =
+          const [sourceSchemaName, value, identifier, , filterString] =
             OptionsSchema.split("#").slice(1);
+          const filterObject = parseFilterString(filterString);
           processedOptions = extractOptionsFromSchema(
             value,
             normalise(identifier),
             dataObject[sourceSchemaName].data,
             viewName,
-            sourceSchemaName
+            sourceSchemaName,
+            filterObject
           );
         } else {
           processedOptions = Options;
@@ -150,9 +174,28 @@ function FormEntry(props) {
           disabled: submitting,
         };
 
+        //Custom field
+        switch (fieldName) {
+          case "Internal Moves":
+            return (
+              <InternalMoves
+                name={normalisedFieldName}
+                internalMovesString={
+                  formData[normalisedFieldName]
+                    ? formData[normalisedFieldName]
+                    : {}
+                }
+                formData={formData}
+                updateFormData={updateFormData}
+              />
+            );
+          default:
+            break;
+        }
+
         switch (Type) {
           case "HTML":
-            return <div dangerouslySetInnerHTML={{ __html: fieldName }}></div>;
+            return <HtmlTemplates fieldName={fieldName} />;
           case "Comment":
             return (
               <h3 key={fieldName} style={{ marginBottom: "15px" }}>
@@ -239,7 +282,8 @@ function FormEntry(props) {
                 key={fieldName}
                 type="number"
                 value={
-                  formData[normalisedFieldName]
+                  formData[normalisedFieldName] ||
+                  formData[normalisedFieldName] === 0
                     ? formData[normalisedFieldName]
                     : ""
                 }
@@ -267,7 +311,8 @@ function FormEntry(props) {
                   children: "£",
                 }}
                 value={
-                  formData[normalisedFieldName]
+                  formData[normalisedFieldName] ||
+                  formData[normalisedFieldName] === 0
                     ? formData[normalisedFieldName]
                     : ""
                 }
@@ -314,9 +359,19 @@ function FormEntry(props) {
                     : null
                 }
                 hint={hint ? { children: hint } : null}
-                items={processedOptions.map((option) =>
-                  option.children ? option : { children: option, value: option }
-                )}
+                items={processedOptions
+                  .map((option) =>
+                    option.children
+                      ? option
+                      : { children: option, value: option }
+                  )
+                  .sort((a, b) =>
+                    a.children === b.children
+                      ? 0
+                      : a.children > b.children
+                      ? 1
+                      : -1
+                  )}
                 label={{
                   children: fieldName,
                 }}
@@ -534,15 +589,18 @@ function FormEntry(props) {
         }
       }
     } else {
-      if (!formData[normalisedFieldName]) return null;
+      if (!formData[normalisedFieldName] && formData[normalisedFieldName] !== 0)
+        return null;
       if (schema[fieldName].OptionsSchema) {
-        const [, schemaName, id, primaryField, path, ...fields] =
+        const [, schemaName, id, primaryField, path, , ...fields] =
           schema[fieldName].OptionsSchema.split("#");
+        //const filterObject = parseFilterString(filterString);
         const filterField =
           schema[fieldName].Type === "Data List" ? normalise(primaryField) : id;
         const value = dataObject[schemaName].data.filter(
           (row) => row[filterField] === formData[normalisedFieldName]
         );
+        if (value.length === 0) return null;
         return (
           <Table
             firstCellIsHeader

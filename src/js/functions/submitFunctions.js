@@ -1,15 +1,39 @@
 import { formatDateTime, formatDate } from "./utilities";
 import { convertDatesForSingleRow } from "./dataProcessing";
 
-const submit = (inputs) => {
+const checkErrors = (inputs) => {
   const {
-    setSubmitting,
     splitFields,
     normalise,
     schema,
     formData,
     isRevealConditionMet,
     setErrors,
+  } = inputs;
+
+  const newErrors = {};
+  splitFields.forEach((field) => {
+    var normalisedFieldName = normalise(field);
+    if (
+      schema[field].Required &&
+      !["Record List", "Comment"].includes(schema[field].Type) &&
+      !formData[normalisedFieldName] &&
+      formData[normalisedFieldName] !== 0 &&
+      isRevealConditionMet(schema[field].RevealCondition)
+    ) {
+      newErrors[normalisedFieldName] = `Please enter a value for ${field}`;
+    }
+  });
+
+  setErrors(newErrors);
+  return newErrors;
+};
+
+const updateData = (inputs, goBack) => {
+  const {
+    normalise,
+    schema,
+    formData,
     user,
     dataObject,
     Schemas,
@@ -20,103 +44,94 @@ const submit = (inputs) => {
     history,
   } = inputs;
 
-  setSubmitting(true);
-  const newErrors = {};
-  splitFields.forEach((field) => {
-    var normalisedFieldName = normalise(field);
+  const updateObject = Object.keys(formData).reduce(
+    (object, key) => {
+      if (!formData.ID || record[key] !== formData[key]) {
+        object[key] = formData[key];
+      }
+      return object;
+    },
+    { ID: formData.ID }
+  );
+
+  const updateTime = formatDateTime(new Date());
+
+  for (let field in schema) {
+    let normalisedFieldName = normalise(field);
     if (
-      schema[field].Required &&
-      !["Record List", "Comment"].includes(schema[field].Type) &&
-      !formData[normalisedFieldName] &&
-      isRevealConditionMet(schema[field].RevealCondition)
+      schema[field].TimeStamp &&
+      updateObject[normalisedFieldName] !== record[normalisedFieldName]
     ) {
-      newErrors[normalisedFieldName] = `Please enter a value for ${field}`;
+      updateObject[`${normalisedFieldName}UpdatedAt`] = updateTime;
+      updateObject[`${normalisedFieldName}UpdatedBy`] = user;
     }
-  });
+    if (schema[field].Type === "Date" && updateObject[normalisedFieldName]) {
+      updateObject[normalisedFieldName] = formatDate(
+        updateObject[normalisedFieldName]
+      );
+    }
+    if (
+      schema[field].Type === "DateTime" &&
+      updateObject[normalisedFieldName]
+    ) {
+      updateObject[normalisedFieldName] = formatDateTime(
+        updateObject[normalisedFieldName]
+      );
+    }
+  }
 
-  setErrors(newErrors);
-
-  if (Object.keys(newErrors).length > 0) {
-    setSubmitting(false);
-  } else {
-    const updateObject = Object.keys(formData).reduce(
-      (object, key) => {
-        if (!formData.ID || record[key] !== formData[key]) {
-          object[key] = formData[key];
-        }
-        return object;
-      },
-      { ID: formData.ID }
-    );
-
-    const updateTime = formatDateTime(new Date());
+  if (!updateObject.ID) {
+    updateObject.CreatedBy = user;
+    updateObject.CreatedAt = updateTime;
 
     for (let field in schema) {
       let normalisedFieldName = normalise(field);
-      if (
-        schema[field].TimeStamp &&
-        updateObject[normalisedFieldName] !== record[normalisedFieldName]
-      ) {
-        updateObject[`${normalisedFieldName}UpdatedAt`] = updateTime;
-        updateObject[`${normalisedFieldName}UpdatedBy`] = user;
-      }
-      if (schema[field].Type === "Date" && updateObject[normalisedFieldName]) {
-        updateObject[normalisedFieldName] = formatDate(
-          updateObject[normalisedFieldName]
-        );
-      }
-      if (
-        schema[field].Type === "DateTime" &&
-        updateObject[normalisedFieldName]
-      ) {
-        updateObject[normalisedFieldName] = formatDateTime(
-          updateObject[normalisedFieldName]
-        );
+      if (schema[field].DefaultValue && !updateObject[normalisedFieldName]) {
+        updateObject[normalisedFieldName] = schema[field].DefaultValue;
       }
     }
+  }
 
-    if (!updateObject.ID) {
-      updateObject.CreatedBy = user;
-      updateObject.CreatedAt = updateTime;
+  updateObject.UpdatedBy = user;
+  updateObject.UpdatedAt = updateTime;
 
-      for (let field in schema) {
-        let normalisedFieldName = normalise(field);
-        if (schema[field].DefaultValue && !updateObject[normalisedFieldName]) {
-          updateObject[normalisedFieldName] = schema[field].DefaultValue;
-        }
-      }
-    }
+  const sheetName = extractSheetName(DataSheetName, updateObject);
 
-    updateObject.UpdatedBy = user;
-    updateObject.UpdatedAt = updateTime;
+  console.log({ sheetName, updateObject });
 
-    const sheetName = extractSheetName(DataSheetName, updateObject);
+  google.script.run
+    .withSuccessHandler((id) => {
+      const splitSchemas = Schemas.split("#");
+      const newDataObject = { ...dataObject };
+      newDataObject[splitSchemas[0]].data = newDataObject[
+        splitSchemas[0]
+      ].data.filter((row) => row.ID != id);
+      const dateFields = Object.values(schema)
+        .filter((field) => ["Date", "DateTime"].includes(field.Type))
+        .map((field) => normalise(field.Field));
+      const newRecord = convertDatesForSingleRow(
+        { ...record, ...updateObject, ID: id },
+        dateFields
+      );
 
-    google.script.run
-      .withSuccessHandler((id) => {
-        const splitSchemas = Schemas.split("#");
-        const newDataObject = { ...dataObject };
-        newDataObject[splitSchemas[0]].data = newDataObject[
-          splitSchemas[0]
-        ].data.filter((row) => row.ID != id);
-        const dateFields = Object.values(schema)
-          .filter((field) => ["Date", "DateTime"].includes(field.Type))
-          .map((field) => normalise(field.Field));
-        const newRecord = convertDatesForSingleRow(
-          { ...record, ...updateObject, ID: id },
-          dateFields
-        );
+      newDataObject[splitSchemas[0]].data.push(newRecord);
+      setDataObject(newDataObject);
+      goBack && history.goBack();
+    })
+    .withFailureHandler((err) => {
+      console.log(err);
+    })
+    .updateData({ sheetName, updateObject });
+};
 
-        newDataObject[splitSchemas[0]].data.push(newRecord);
-        //if(recordId === "add_new") setFormData({});
-        setDataObject(newDataObject);
-        //setSubmitting(false);
-        history.goBack();
-      })
-      .withFailureHandler((err) => {
-        console.log(err);
-      })
-      .updateData({ sheetName, updateObject });
+const submit = (inputs, goBack = true) => {
+  const { setSubmitting } = inputs;
+  setSubmitting(true);
+  const newErrors = checkErrors(inputs);
+  if (Object.keys(newErrors).length > 0) {
+    setSubmitting(false);
+  } else {
+    updateData(inputs, goBack);
   }
 };
 
@@ -129,37 +144,104 @@ function createNewVacancySubmit(inputs) {
   inputs.formData.CapitalRole = "No";
   inputs.formData.RollingCampaign = "No";
   inputs.formData.Recruiter = "Unassigned";
-  if (inputs.formData.Doyouneedtohirepermanentlyonly === "Yes") {
+
+  let statusTimeline = new Map();
+  statusTimeline.set(0, [
+    "E) Approved - Ready To Launch",
+    formatDateTime(new Date()),
+  ]);
+  inputs.formData.StatusTimeline = JSON.stringify([...statusTimeline]);
+
+  if (inputs.formData.EmploymentStatus) {
     inputs.DataSheetName = "CS Vacancies";
     inputs.Schemas = "CS Vacancies Schema";
-  } else {
+    submit(inputs, !inputs.formData.BusinessCaseLink ? true : false);
+  }
+
+  if (inputs.formData.BusinessCaseLink) {
     inputs.DataSheetName = "Contractor Vacancies";
     inputs.Schemas = "Contractor Vacancies Schema";
+
+    inputs.formData.Status = "1 - Contracting Review";
+
+    let statusTimeline = new Map();
+    statusTimeline.set(0, [
+      "1 - Contracting Review",
+      formatDateTime(new Date()),
+    ]);
+    inputs.formData.StatusTimeline = JSON.stringify([...statusTimeline]);
+
+    inputs.formData.NeworExtension = "New";
+
+    inputs.formData.BusinessUnitSCSApproval = "Pending";
+    inputs.formData.HRBPGDSWeeklyReviewMeeting = "Pending";
+    inputs.formData.COFinanceBPApproval = "Pending";
+    inputs.formData.CabinetOfficeApproval = "Pending";
+    inputs.formData.MinisterialApproval = "Pending";
+    inputs.formData.FinalOutcome = "Pending";
+
+    submit(inputs);
   }
-  submit(inputs);
 }
 
 function onboardCivilServant(inputs) {
-  const { dataObject, formData, setDataObject, setSubmitting } = inputs;
+  const { dataObject, formData, setDataObject, setSubmitting, record } = inputs;
   setSubmitting(true);
-  google.script.run
-    .withSuccessHandler(() => {
-      const newDataObject = { ...dataObject };
-      newDataObject["CS Vacancies Schema"].data = newDataObject[
-        "CS Vacancies Schema"
-      ].data.map((row) => {
-        if (row.ID === formData.VacancyID) {
-          row.RequirementFilled = "Yes";
-        }
-        return row;
+
+  if (formData.FullNameInternalCandidate) {
+    delete record.JobTitle;
+    delete record.Payband;
+    delete record.EmploymentStatus;
+    delete record.FTE;
+    delete record.RoleID;
+  }
+
+  //New stuff
+
+  const parsedStatusTimeline = new Map(JSON.parse(formData.StatusTimeline));
+
+  parsedStatusTimeline.set(parsedStatusTimeline.size, [
+    "T) Ready To Start",
+    formatDateTime(new Date()),
+  ]);
+
+  parsedStatusTimeline.set(parsedStatusTimeline.size, [
+    "U) In Post",
+    formatDateTime(new Date(formData.ContractStartDate)),
+  ]);
+
+  formData.StatusTimeline = JSON.stringify([...parsedStatusTimeline]);
+
+  // end new stuff
+
+  const newErrors = checkErrors(inputs);
+  if (Object.keys(newErrors).length > 0) {
+    setSubmitting(false);
+  } else {
+    google.script.run
+      .withSuccessHandler(() => {
+        const newDataObject = { ...dataObject };
+        newDataObject["CS Vacancies Schema"].data = newDataObject[
+          "CS Vacancies Schema"
+        ].data.map((row) => {
+          if (row.ID === formData.VacancyID) {
+            row.RequirementFilled = "Yes";
+          }
+          return row;
+        });
+
+        setDataObject(newDataObject);
+        updateData(inputs, true);
+      })
+      .updateData({
+        sheetName: "CS Vacancies",
+        updateObject: {
+          ID: formData.VacancyID,
+          RequirementFilled: "Yes",
+          StatusTimeline: formData.StatusTimeline,
+        },
       });
-      setDataObject(newDataObject);
-      submit(inputs);
-    })
-    .updateData({
-      sheetName: "CS Vacancies",
-      updateObject: { ID: formData.VacancyID, RequirementFilled: "Yes" },
-    });
+  }
 }
 
 function approveWorkforcePlanChanges(inputs) {
@@ -196,14 +278,124 @@ function approveWorkforcePlanChanges(inputs) {
     });
 }
 
+function updateVacancy(inputs) {
+  const parsedStatusTimeline = new Map(
+    JSON.parse(inputs.formData.StatusTimeline)
+  );
+  const lastStatusUpdateArray = Array.from(parsedStatusTimeline.values()).pop();
+  if (
+    inputs.formData.Status !==
+    (lastStatusUpdateArray && lastStatusUpdateArray[0]
+      ? lastStatusUpdateArray[0]
+      : "")
+  ) {
+    parsedStatusTimeline.set(parsedStatusTimeline.size, [
+      inputs.formData.Status,
+      formatDateTime(new Date()),
+    ]);
+  }
+  inputs.formData.StatusTimeline = JSON.stringify([...parsedStatusTimeline]);
+  submit(inputs);
+}
+
+function getContractorOriginalStartDate(name, contractStartDate, dataObject) {
+  const previousContracts = dataObject["Contractors Schema"].data.filter(
+    (row) => row.FullName === name
+  );
+  if (previousContracts.length === 0) return contractStartDate;
+  return previousContracts
+    .map((row) => row.OriginalStartDate)
+    .sort((a, b) => a - b)[0];
+}
+
+function onboardContractorVacancy(inputs) {
+  const { dataObject, formData, setDataObject, setSubmitting } = inputs;
+
+  formData.OriginalStartDate = getContractorOriginalStartDate(
+    formData.FullName,
+    formData.ContractStartDate,
+    dataObject
+  );
+
+  if (formData.VacancyID) {
+    setSubmitting(true);
+    const newErrors = checkErrors(inputs);
+    if (Object.keys(newErrors).length > 0) {
+      setSubmitting(false);
+    } else {
+      google.script.run
+        .withSuccessHandler(() => {
+          const newDataObject = { ...dataObject };
+          newDataObject["Contractor Vacancies Schema"].data = newDataObject[
+            "Contractor Vacancies Schema"
+          ].data.map((row) => {
+            if (row.ID === formData.VacancyID) {
+              row.RequirementFilled = "Yes";
+              row.Status = "5 - Complete";
+            }
+            return row;
+          });
+          setDataObject(newDataObject);
+          updateData(inputs, true);
+        })
+        .updateData({
+          sheetName: "Contractor Vacancies",
+          updateObject: {
+            ID: formData.VacancyID,
+            RequirementFilled: "Yes",
+            Status: "5 - Complete",
+          },
+        });
+    }
+  } else {
+    submit(inputs);
+  }
+}
+
+function TEMPCreateNewVacancy(inputs) {
+  let statusTimeline = new Map();
+  statusTimeline.set(0, [
+    "E) Approved - Ready To Launch",
+    formatDateTime(new Date()),
+  ]);
+  inputs.formData.StatusTimeline = JSON.stringify([...statusTimeline]);
+  submit(inputs);
+}
+
+function submitBusinessManagerView(inputs) {
+  const amendedFirstMoveDateObject = JSON.parse(inputs.formData.InternalMoves);
+  amendedFirstMoveDateObject["0"]["Date"] = 0;
+  inputs.formData.InternalMoves = JSON.stringify(amendedFirstMoveDateObject);
+  submit(inputs);
+}
+
 function getSubmitFunction(viewName) {
   switch (viewName) {
+    case "Business Manager View":
+      return submitBusinessManagerView;
     case "Requested Changes":
       return approveWorkforcePlanChanges;
     case "Create New Vacancy":
       return createNewVacancySubmit;
     case "Onboard Civil Servant":
       return onboardCivilServant;
+    case "Live CS Vacancies":
+    case "Complete CS Vacancies":
+    case "Vetting and Onboarding":
+    case "Withdrawn CS Vacancies":
+    case "All Contracting Requirements":
+    case "Contracting Review":
+    case "Approvals":
+    case "Recruitment and Procurement":
+    case "Onboarding":
+    case "Complete":
+    case "On Hold":
+    case "Cancelled":
+      return updateVacancy;
+    case "TEMP Create New Vacancy":
+      return TEMPCreateNewVacancy;
+    case "Add New Contingent Worker or Contractor":
+      return onboardContractorVacancy;
     default:
       return submit;
   }

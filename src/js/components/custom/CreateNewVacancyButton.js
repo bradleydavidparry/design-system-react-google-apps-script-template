@@ -16,5 +16,9 @@ export default function CreateNewVacancyButton(props) {
 
   if (formData.AvailableForCSVacancy === "No") return null;
   if (!checkUserAccess("Business Manager", userType)) return null;
-  return <Button onClick={onboardClick}>Create Vacancy For This Role</Button>;
+  return (
+    <Button onClick={onboardClick} isStartButton>
+      Create A Vacancy For This Role
+    </Button>
+  );
 }

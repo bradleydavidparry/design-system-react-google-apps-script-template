@@ -3,7 +3,12 @@ import groupBy from "lodash/groupBy";
 //import forEach from 'lodash/forEach';
 //import keys from 'lodash/keys';
 //import reduce from 'lodash/reduce';
-import { normalise, checkUserAccess } from "./utilities";
+import {
+  normalise,
+  checkUserAccess,
+  formatDateInput,
+  networkdays,
+} from "./utilities";
 
 function extractOptionsFromSchema(
   value,
@@ -30,13 +35,33 @@ function extractOptionsFromValidation(validation, columnHeader) {
 
 function createLookupObject(validation) {
   let i = 0;
-  const returnObject = { team: {} };
+  const returnObject = { team: {}, ccToTeam: {}, subTeamObject: {} };
   while (validation[i] && validation[i]["CostCentreName"]) {
     returnObject.team[validation[i]["CostCentreName"]] = {
       group: validation[i]["GroupName"],
       costCentre: validation[i]["CostCentre"],
       programme: validation[i]["Programme"],
       defaultSubTeam: validation[i]["SubTeamIDLookup"],
+      name: validation[i]["CostCentreName"],
+    };
+
+    returnObject.ccToTeam[validation[i]["CostCentre"]] = {
+      group: validation[i]["GroupName"],
+      costCentre: validation[i]["CostCentre"],
+      programme: validation[i]["Programme"],
+      defaultSubTeam: validation[i]["SubTeamIDLookup"],
+      name: validation[i]["CostCentreName"],
+    };
+
+    i++;
+  }
+
+  i = 0;
+  while (validation[i] && validation[i]["SubTeamID"]) {
+    returnObject.subTeamObject[validation[i]["SubTeamID"]] = {
+      name: validation[i]["SubTeam"],
+      costCentre: validation[i]["SubTeamCostCentre"],
+      id: validation[i]["SubTeamID"],
     };
     i++;
   }
@@ -66,7 +91,10 @@ function processStructureData(object, dict) {
 
   const filteredViews = views.filter(
     (view) =>
-      view.Active && checkUserAccess(view["UserTypesWhoCanAccess"], userType)
+      (view.Active ||
+        (["bradley.parry@digital.cabinet-office.gov.uk"].includes(user) &&
+          view.ActiveInDevelopment)) &&
+      checkUserAccess(view["UserTypesWhoCanAccess"], userType)
   );
 
   let defaultSectionName = defaultSection[0]?.DefaultSection
@@ -134,6 +162,11 @@ function convertDatesForSingleRow(row, dateFields) {
 
 function customDataProcessing(schemaName, dataObject) {
   switch (schemaName) {
+    case "Commissioning Schema":
+      return dataObject[schemaName].data.map((row) => {
+        row.ID = row.WPNumber;
+        return row;
+      });
     case "Workforce Plan Schema":
       const csByRoleId = groupBy(dataObject["CS Schema"].data, "RoleID");
       const contractorsByRoleId = groupBy(
@@ -161,7 +194,9 @@ function customDataProcessing(schemaName, dataObject) {
           (con) => con.CurrentlyEmployed === "Yes"
         );
         row.CurrentCsVacancy = csVacsByRoleID[row.ID]?.filter(
-          (csvac) => csvac.RequirementFilled === "No"
+          (csvac) =>
+            csvac.RequirementFilled === "No" &&
+            csvac.Status !== "D) Role Withdrawn"
         );
         row.CurrentContractorVacancy = conVacsByRoleID[row.ID]?.filter(
           (convac) => convac.RequirementFilled === "No"
@@ -220,9 +255,56 @@ function customDataProcessing(schemaName, dataObject) {
           (!row.CurrentCivilServant ||
             row.CurrentCivilServant[0]?.LastDateofService) &&
           !row.CurrentCsVacancy &&
+          row.Active === "Yes" &&
           !row.ChangeRequestsOutstanding
             ? "Yes"
             : "No";
+        return row;
+      });
+      return dataObject[schemaName].data;
+    case "CS Schema":
+      dataObject[schemaName].data = dataObject[schemaName].data.map((row) => {
+        row.TotalAllowances =
+          (Number(row.RRAAllowanceAnnual) || 0) +
+          (Number(row.MiscellaneousAllowanceAnnual) || 0) +
+          (Number(row.DDaTAllowanceAnnual) || 0) +
+          (Number(row.TDAannual) || 0);
+
+        const updatedInternalMoves = {
+          ...JSON.parse(row.InternalMoves),
+        };
+
+        updatedInternalMoves["0"]["Date"] = formatDateInput(
+          new Date(row.OriginalStartDate)
+        );
+
+        row.InternalMoves = JSON.stringify(updatedInternalMoves);
+
+        return row;
+      });
+      return dataObject[schemaName].data;
+    case "Contractors Schema":
+      dataObject[schemaName].data = dataObject[schemaName].data.map((row) => {
+        row.Days =
+          row.ContractStartDate && row.ContractEndDate
+            ? networkdays(row.ContractStartDate, row.ContractEndDate)
+            : "";
+        row.TotalPOValue = row.TotalPOValue
+          ? row.TotalPOValue
+          : row.Days && row.ChargeRate
+          ? row.Days * row.ChargeRate
+          : 0;
+        return row;
+      });
+      return dataObject[schemaName].data;
+    case "R&R Schema":
+      dataObject[schemaName].data = dataObject[schemaName].data.map((row) => {
+        row.AmountRequested = row.VoucherAmount
+          ? row.VoucherAmount
+          : row.BonusAmount;
+        row.AmountApproved = row.ApprovedVoucherAmount
+          ? row.ApprovedVoucherAmount
+          : row.ApprovedBonusAmount;
         return row;
       });
       return dataObject[schemaName].data;
@@ -305,7 +387,7 @@ function processDataAndSchema(viewName, dataObject, splitSchemas, lookups) {
   }
 }
 
-function processFormData(schema, newFormData, lookups, viewName) {
+function processFormData(schema, newFormData, viewName, dataObject, lookups) {
   if (schema["Group"]) {
     newFormData.Group = lookups.team[newFormData.Team]
       ? lookups.team[newFormData.Team].group
@@ -329,6 +411,10 @@ function processFormData(schema, newFormData, lookups, viewName) {
         newFormData.Team =
           lookups["Workforce Plan Schema"][newFormData.RoleID].Team;
       }
+      if (newFormData.EmploymentStatusFTAorsFTAOnly) {
+        newFormData.EmploymentStatus =
+          newFormData.EmploymentStatusFTAorsFTAOnly;
+      }
       break;
     case "Request Role Change":
       newFormData.NewGroup = lookups.team[newFormData.NewTeam]
@@ -347,7 +433,98 @@ function processFormData(schema, newFormData, lookups, viewName) {
             : "",
         },
       });
+
+      newFormData.OriginalStartDate = newFormData.ContractStartDate;
+
+      newFormData.TotalAllowances =
+        (Number(newFormData.RRAAllowanceAnnual) || 0) +
+        (Number(newFormData.MiscellaneousAllowanceAnnual) || 0) +
+        (Number(newFormData.DDaTAllowanceAnnual) || 0);
+
+      newFormData.TDAannual = 0;
+
+      if (newFormData.FullNameInternalCandidate) {
+        newFormData.FullName = newFormData.FullNameInternalCandidate;
+
+        const selectedCivilServant = dataObject["CS Schema"].data.filter(
+          (row) => row.FullName === newFormData.FullNameInternalCandidate
+        )[0];
+
+        if (selectedCivilServant) {
+          newFormData.InternalMoves = JSON.parse(
+            selectedCivilServant.InternalMoves
+          );
+          const moveIds = Object.keys(newFormData.InternalMoves);
+          const moveId = Number(moveIds[moveIds.length - 1]) + 1;
+          newFormData.InternalMoves[moveId] = {
+            CC: newFormData.CostCentre,
+            Date: newFormData.ContractStartDate
+              ? formatDateInput(new Date(newFormData.ContractStartDate))
+              : "",
+            Capital: "No",
+            "Sub Team": lookups.team[newFormData.Team]
+              ? lookups.team[newFormData.Team].defaultSubTeam
+              : "",
+          };
+          newFormData.InternalMoves = JSON.stringify(newFormData.InternalMoves);
+        }
+
+        const csId = selectedCivilServant?.ID;
+
+        newFormData.ID = csId;
+        delete newFormData.OriginalStartDate;
+      }
+      if (newFormData.FullNameExternalCandidate) {
+        newFormData.FullName = newFormData.FullNameExternalCandidate;
+      }
       break;
+    case "Main Database":
+    case "RRA":
+    case "DDaT":
+    case "TDA":
+      newFormData.TotalAllowances =
+        (Number(newFormData.RRAAllowanceAnnual) || 0) +
+        (Number(newFormData.MiscellaneousAllowanceAnnual) || 0) +
+        (Number(newFormData.DDaTAllowanceAnnual) || 0) +
+        (Number(newFormData.TDAannual) || 0);
+      break;
+    case "Add New Contractor":
+    case "Contractors Main Database":
+      newFormData.Days =
+        newFormData.ContractStartDate && newFormData.ContractEndDate
+          ? networkdays(
+              newFormData.ContractStartDate,
+              newFormData.ContractEndDate
+            )
+          : "";
+      if (!newFormData.ID) {
+        newFormData.TotalPOValue =
+          newFormData.Days && newFormData.ChargeRate
+            ? newFormData.Days * newFormData.ChargeRate
+            : 0;
+      }
+      break;
+    case "Submit New R&R Request":
+      const individual = newFormData.NomineesFullName
+        ? dataObject["CS Schema"].data.filter(
+            (person) => person.FullName === newFormData.NomineesFullName
+          )[0]
+        : null;
+      newFormData.Group = individual ? individual.Group : "";
+      newFormData.Team = individual ? individual.Team : "";
+      newFormData.JobTitle = individual ? individual.JobTitle : "";
+      newFormData.Payband = individual ? individual.Payband : "";
+
+      newFormData.ApprovedVoucherAmount = newFormData.VoucherAmount
+        ? newFormData.VoucherAmount
+        : "";
+      newFormData.ApprovedBonusAmount = newFormData.BonusAmount
+        ? newFormData.BonusAmount
+        : "";
+      break;
+    // case "Commissioning":
+    //   newFormData.ID = newFormData.WPNumber;
+    //   break;
     default:
       break;
   }

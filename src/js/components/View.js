@@ -6,7 +6,11 @@ import ViewComponent from "./ViewComponent";
 import ErrorBoundary from "./ErrorBoundary";
 import BackButton from "./BackButton";
 import { Switch, Route, Link, useRouteMatch, Redirect } from "react-router-dom";
-import { normalise, checkUserAccess } from "../functions/utilities";
+import {
+  normalise,
+  checkUserAccess,
+  parseFilterString,
+} from "../functions/utilities";
 import FormatValue from "../functions/FormatValue";
 import {
   processViewData,
@@ -18,23 +22,6 @@ import {
   getRowNotificationCondition,
   checkHighlightConditionMet,
 } from "../functions/getRowNotificationCondition";
-
-function createViewFilterObject(inputString) {
-  if (!inputString) return {};
-  return inputString.split("#").reduce(
-    (object, substring) => {
-      if (substring.includes("!=")) {
-        const [field, listString] = substring.split("!=");
-        object.exclude[normalise(field)] = JSON.parse(listString);
-      } else {
-        const [field, listString] = substring.split("=");
-        object.include[normalise(field)] = JSON.parse(listString);
-      }
-      return object;
-    },
-    { include: {}, exclude: {} }
-  );
-}
 
 function View(props) {
   const {
@@ -123,12 +110,20 @@ function View(props) {
     const [field] = fieldString.split("||");
     return normalise(field);
   });
-  const sortFieldsList = SortFields?.split("#");
+  const sortFieldsList = SortFields?.split("#").map((field) =>
+    normalise(field)
+  );
   const searchFieldsSplit = SearchFields
     ? SearchFields.split("#").map((field) => normalise(field))
     : ["All"];
 
-  const viewFilterObject = createViewFilterObject(ViewFilter);
+  const viewFilterObject = parseFilterString(ViewFilter);
+
+  let { field: sortField, dir } = filterObject.sort;
+
+  sortField = !sortFieldsList.includes(sortField)
+    ? normalise(SortFields.split("#")[0])
+    : normalise(sortField);
 
   const filteredAndSortedData = data
     .filter((row) => {
@@ -165,11 +160,14 @@ function View(props) {
       return searchTerms.every((term) => rowValueString.includes(term));
     })
     .sort((a, b) => {
-      let { field, dir } = filterObject.sort;
-      field = !sortFieldsList.includes(field)
-        ? normalise(SortFields.split("#")[0])
-        : field;
-      return a[field] === b[field] ? 0 : a[field] > b[field] ? dir : dir * -1;
+      return a.ID === b.ID ? 0 : a.ID > b.ID ? 1 : -1;
+    })
+    .sort((a, b) => {
+      return a[sortField] === b[sortField]
+        ? 0
+        : a[sortField] > b[sortField]
+        ? dir
+        : dir * -1;
     });
 
   const includeIndexPage = checkUserAccess(IndexUserTypes, userType, false);

@@ -56,6 +56,16 @@ function formatDate(date) {
   return day + "/" + month + "/" + date.getFullYear();
 }
 
+function formatDateInput(date) {
+  if (!date) return "";
+  date = new Date(date);
+  var day = date.getDate();
+  day = day < 10 ? "0" + day : day;
+  var month = date.getMonth() + 1;
+  month = month < 10 ? "0" + month : month;
+  return date.getFullYear() + "-" + month + "-" + day;
+}
+
 function normalise(text) {
   return text.replace(/\W+/g, "").replace(/^\d+/, "");
 }
@@ -80,6 +90,49 @@ function checkUserAccess(
   return userTypes.some((type) => userTypesAccessString.includes(type));
 }
 
+function parseFilterString(inputString) {
+  if (!inputString) return {};
+  return inputString.split("#").reduce(
+    (object, substring) => {
+      if (substring.includes("!=")) {
+        const [field, listString] = substring.split("!=");
+        object.exclude[normalise(field)] = JSON.parse(listString);
+      } else {
+        const [field, listString] = substring.split("=");
+        object.include[normalise(field)] = JSON.parse(listString);
+      }
+      return object;
+    },
+    { include: {}, exclude: {} }
+  );
+}
+
+function networkdays(startDate, endDate) {
+  var startDate =
+    typeof startDate == "object" ? startDate : new Date(startDate);
+  var endDate = typeof endDate == "object" ? endDate : new Date(endDate);
+  if (endDate > startDate) {
+    var days = Math.ceil(
+      (endDate.setHours(23, 59, 59, 999) - startDate.setHours(0, 0, 0, 1)) /
+        (86400 * 1000)
+    );
+    var weeks = Math.floor(
+      Math.ceil(
+        (endDate.setHours(23, 59, 59, 999) - startDate.setHours(0, 0, 0, 1)) /
+          (86400 * 1000)
+      ) / 7
+    );
+
+    days = days - weeks * 2;
+    days = startDate.getDay() - endDate.getDay() > 1 ? days - 2 : days;
+    days = startDate.getDay() == 0 && endDate.getDay() != 6 ? days - 1 : days;
+    days = endDate.getDay() == 6 && startDate.getDay() != 0 ? days - 1 : days;
+
+    return days;
+  }
+  return null;
+}
+
 export {
   formatMoney,
   formatDate,
@@ -87,4 +140,7 @@ export {
   normalise,
   emailToName,
   checkUserAccess,
+  formatDateInput,
+  parseFilterString,
+  networkdays,
 };

@@ -110,7 +110,9 @@ function Toolbar(props) {
                       <Select
                         items={[
                           "All",
-                          ...new Set(data.map((row) => row[normalisedName])),
+                          ...new Set(
+                            data.map((row) => row[normalisedName]).sort()
+                          ),
                         ].map((value) => ({ children: value, value }))}
                         label={{
                           children: filterField,

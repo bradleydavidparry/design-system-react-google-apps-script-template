@@ -10,10 +10,20 @@ export default function OnboardButton(props) {
   const onboardClick = () => {
     formData.VacancyID = formData.ID;
     delete formData.ID;
+    formData.LineManager = formData.HiringManagerLineManager;
     let query = new URLSearchParams(formData).toString();
     history.push(`/recruitment/onboard-civil-servant/add_new?${query}`);
   };
 
-  if (!checkUserAccess("Recruitment Team", userType)) return null;
+  if (
+    !checkUserAccess("People Team", userType) ||
+    ![
+      "S) Ready To Onboard",
+      "O) Offer Accepted",
+      "Q) Paycase Approval",
+      "R) Vetting In Progress",
+    ].includes(formData.Status)
+  )
+    return null;
   return <Button onClick={onboardClick}>Onboard Vacancy</Button>;
 }

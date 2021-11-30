@@ -1,7 +1,7 @@
 import React from "react";
 import { Label, Hint, ErrorMessage } from "../..";
 
-const Select = React.forwardRef((props, ref) => {
+const GroupSelect = React.forwardRef((props, ref) => {
   const {
     className,
     "aria-describedby": describedBy,
@@ -30,17 +30,39 @@ const Select = React.forwardRef((props, ref) => {
     errorMessageComponent = <ErrorMessage {...errorMessage} id={errorId} />;
   }
 
+  // const options = items
+  //   ? items
+  //       .filter((item) => item)
+  //       .map((option, index) => {
+  //         const { reactListKey, children, ...optionAttributes } = option;
+  //         return (
+  //           <option {...optionAttributes} key={reactListKey || index}>
+  //             {children}
+  //           </option>
+  //         );
+  //       })
+  //   : null;
+
   const options = items
-    ? items
-        .filter((item) => item)
-        .map((option, index) => {
-          const { reactListKey, children, ...optionAttributes } = option;
+    ? [<option value=""></option>].concat(
+        Object.keys(items).map((teamName) => {
           return (
-            <option {...optionAttributes} key={reactListKey || index}>
-              {children}
-            </option>
+            <optgroup label={teamName}>
+              {items[teamName]
+                .filter((item) => item)
+                .map((option, index) => {
+                  const { reactListKey, children, ...optionAttributes } =
+                    option;
+                  return (
+                    <option {...optionAttributes} key={reactListKey || index}>
+                      {children}
+                    </option>
+                  );
+                })}
+            </optgroup>
           );
         })
+      )
     : null;
 
   return (
@@ -67,6 +89,6 @@ const Select = React.forwardRef((props, ref) => {
   );
 });
 
-Select.displayName = "Select";
+GroupSelect.displayName = "Select";
 
-export { Select };
+export { GroupSelect };

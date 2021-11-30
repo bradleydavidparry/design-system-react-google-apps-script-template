@@ -3,8 +3,9 @@ import PivotTableUI from "react-pivottable/PivotTableUI";
 import "react-pivottable/pivottable.css";
 import TableRenderers from "react-pivottable/TableRenderers";
 import AppContext from "../../views/AppContext";
-// import Plot from 'react-plotly.js';
-// import createPlotlyRenderers from 'react-pivottable/PlotlyRenderers';
+
+// import Plot from "react-plotly.js";
+// import createPlotlyRenderers from "react-pivottable/PlotlyRenderers";
 // const PlotlyRenderers = createPlotlyRenderers(Plot);
 
 export default function ReactPivotTable(props) {
@@ -12,7 +13,7 @@ export default function ReactPivotTable(props) {
   const { accessibleMode } = useContext(AppContext);
 
   useEffect(() => {
-    if (!showUi) {
+    if (!showUi && !accessibleMode) {
       const elements = document.getElementsByClassName("pvtAxisContainer");
       for (var i = 0; i < elements.length; i++) {
         elements[i].style.display = "none";
@@ -22,7 +23,7 @@ export default function ReactPivotTable(props) {
       )[0].parentElement.style.display = "none";
       document.getElementsByClassName("pvtRenderers")[0].style.display = "none";
     }
-  }, [showUi]);
+  }, [showUi, accessibleMode]);
 
   const [tableState, setTableState] = useState({ ...tableProperties });
 
@@ -32,7 +33,7 @@ export default function ReactPivotTable(props) {
       <PivotTableUI
         data={data}
         onChange={(s) => setTableState(s)}
-        renderers={Object.assign({}, TableRenderers /*, PlotlyRenderers */)}
+        renderers={Object.assign({}, TableRenderers /*PlotlyRenderers */)}
         {...tableState}
       />
     </div>

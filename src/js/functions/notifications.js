@@ -35,6 +35,34 @@ function createNotificationsObject(sectionName, dataObject) {
         );
       }
       break;
+    case "Recruitment":
+      if (dataObject["CS Vacancies Schema"]) {
+        notificationsObject = dataObject["CS Vacancies Schema"].data.reduce(
+          (object, row) => {
+            if (
+              row.RequirementFilled === "No" &&
+              row.Recruiter === "Unassigned"
+            ) {
+              object["Live CS Vacancies"] += 1;
+            }
+            if (
+              row.RequirementFilled === "No" &&
+              [
+                "S) Ready To Onboard",
+                "N) Offers",
+                "O) Offer Accepted",
+                "Q) Paycase Approval",
+                "R) Vetting In Progress",
+              ].includes(row.Status)
+            ) {
+              object["Vetting and Onboarding"] += 1;
+            }
+            return object;
+          },
+          { "Live CS Vacancies": 0, "Vetting and Onboarding": 0 }
+        );
+      }
+      break;
     default:
       break;
   }

@@ -1,8 +1,8 @@
-import React, { useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
-import linkifyName from '../../../js/functions/linkifyName';
+import React, { useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
+import linkifyName from "../../../js/functions/linkifyName";
 
-import { Link } from '../../../utils/Link';
+import { Link } from "../../../utils/Link";
 
 function Header(props) {
   const {
@@ -25,11 +25,17 @@ function Header(props) {
   } = props;
   const location = useLocation();
   useEffect(() => {
-    headerRef.current.scrollIntoView() 
-},[location]);
-  
-  
-  const navigation = Object.keys(sections).map(section => ( { active: location.pathname.includes(linkifyName(section)),  children: <Link to={`/${linkifyName(section)}`} className={"govuk-header__link"}>{section}</Link>} ))
+    headerRef.current.scrollIntoView();
+  }, [location]);
+
+  const navigation = Object.keys(sections).map((section) => ({
+    active: location.pathname.includes(linkifyName(section)),
+    children: (
+      <Link to={`/${linkifyName(section)}`} className={"govuk-header__link"}>
+        {section}
+      </Link>
+    ),
+  }));
 
   const headerRef = useRef();
   let productNameComponent;
@@ -68,7 +74,7 @@ function Header(props) {
               <ul
                 id="navigation"
                 className={`govuk-header__navigation ${
-                  navigationClassName || ''
+                  navigationClassName || ""
                 }`}
                 aria-label={navigationLabel}
               >
@@ -86,14 +92,14 @@ function Header(props) {
                       key={reactListKey || index}
                       className={`govuk-header__navigation-item${
                         itemActive
-                          ? ' govuk-header__navigation-item--active'
-                          : ''
+                          ? " govuk-header__navigation-item--active"
+                          : ""
                       }`}
                     >
                       {item.href || item.to ? (
                         <Link
                           className={`govuk-header__link ${
-                            itemClassName || ''
+                            itemClassName || ""
                           }`}
                           {...itemAttributes}
                         >
@@ -115,7 +121,7 @@ function Header(props) {
 
   return (
     <header
-      className={`govuk-header ${className || ''}`}
+      className={`govuk-header ${className || ""}`}
       role="banner"
       data-module="govuk-header"
       {...attributes}
@@ -129,8 +135,10 @@ function Header(props) {
             className="govuk-header__link govuk-header__link--homepage"
           >
             <span className="govuk-header__logotype">
-              {' '}
-              <span className="govuk-header__logotype-text">Operational Data & Tools Team</span>
+              {" "}
+              <span className="govuk-header__logotype-text">
+                Operational Data & Tools Team
+              </span>
             </span>
             {productNameComponent}
           </Link>
@@ -142,10 +150,10 @@ function Header(props) {
 }
 
 Header.defaultProps = {
-  homepageUrlHref: '/',
-  containerClassName: 'govuk-width-container',
-  navigationLabel: 'Navigation menu',
-  menuButtonLabel: 'Show or hide navigation menu',
+  homepageUrlHref: "/",
+  containerClassName: "govuk-width-container",
+  navigationLabel: "Navigation menu",
+  menuButtonLabel: "Show or hide navigation menu",
 };
 
 export { Header };

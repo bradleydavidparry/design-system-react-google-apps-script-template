@@ -20,5 +20,9 @@ export default function RequestWorkforcePlanChange(props) {
 
   if (formData.AvailableForCSVacancy === "No") return null;
   if (!checkUserAccess("Business Manager", userType)) return null;
-  return <Button onClick={requestChangeClick}>Request change to role</Button>;
+  return (
+    <Button onClick={requestChangeClick} isStartButton>
+      Request A Change To This Role
+    </Button>
+  );
 }
