@@ -5,17 +5,23 @@ import OnboardContractorButton from "./custom/OnboardContractorButton";
 import CreateExtensionButton from "./custom/CreateExtensionButton";
 import WorkforcePlanSubRecord from "./custom/WorkforcePlanSubRecord";
 import GdsOrgChart from "./custom/GdsOrgChart";
-//import TestOrgChart from "./custom/ClassComponentOrgChart";
+import BudgetTable from "./custom/BudgetTable";
+import OrgDesignOrgChart from "./custom/OrgDesignOrgChart";
+import HomePage from "./custom/HomePage";
 import { normalise } from "../functions/utilities";
 import AppContext from "../views/AppContext";
 
 export default function ViewComponent(props) {
   const { Name, data, schema, type } = props;
-  const { userType } = useContext(AppContext);
+  const { userType, dataObject } = useContext(AppContext);
   let excludeCols, schemaValues, tableProperties;
 
   const getAboveToolbarComponent = (viewName) => {
     switch (viewName) {
+      case "Welcome to the GDS Business Operations Tool":
+        return <HomePage />;
+      case "Org Structure":
+        return <OrgDesignOrgChart />;
       case "GDS":
         return <GdsOrgChart />;
       case "CS Analysis":
@@ -296,6 +302,16 @@ export default function ViewComponent(props) {
 
   const getBelowToolbarComponent = (viewName) => {
     switch (viewName) {
+      case "R&R Pending Approval":
+        const { budget, data: rAndRData } = dataObject["R&R Schema"];
+        return (
+          <BudgetTable
+            type={"R&R"}
+            budget={budget}
+            data={rAndRData}
+            userType={userType}
+          />
+        );
       case "Live CS Vacancies":
         excludeCols = [
           "ID",

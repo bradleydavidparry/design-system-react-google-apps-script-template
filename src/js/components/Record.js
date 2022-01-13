@@ -175,6 +175,7 @@ export default function Record(props) {
                   isRevealConditionMet,
                   setErrors,
                   user,
+                  userType,
                   dataObject,
                   Schemas,
                   setDataObject,
@@ -182,6 +183,7 @@ export default function Record(props) {
                   DataSheetName,
                   record,
                   history,
+                  lookups,
                 })
               }
               disabled={submitting}

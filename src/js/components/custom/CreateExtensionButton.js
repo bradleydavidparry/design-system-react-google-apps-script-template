@@ -15,7 +15,7 @@ export default function CreateExtensionButton(props) {
     extensionData.ContractStatus = "Extension";
     let query = new URLSearchParams(extensionData).toString();
     history.push(
-      `/recruitment/add-new-contingent-worker-or-contractor/add_new?${query}`
+      `/cw-&-contractors/add-new-contingent-worker-or-contractor/add_new?${query}`
     );
   };
 

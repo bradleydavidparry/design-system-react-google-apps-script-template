@@ -28,7 +28,7 @@ function Toolbar(props) {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" || !e.target.value) {
       const newFilterObject = { ...filterObject };
       newFilterObject["Search Bar"] = e.target.value;
       setFilterObject(newFilterObject);

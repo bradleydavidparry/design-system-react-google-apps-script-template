@@ -14,6 +14,11 @@ export default function OnboardContractorButton(props) {
     formData.LineManagerClient = formData.ManagerRequestorName ||= "";
     formData.ContractStatus = formData.NeworExtension ||= "";
 
+    formData.Linktocontractorbusinesscasedocument =
+      formData.BusinessCaseLink ||= "";
+
+    formData.Email = formData.ContingentWorkerContractorEmailAddress ||= "";
+
     formData.ContractLength = formData.LengthofContractRequest ||= "";
 
     formData.IR35Status = formData.IR35AssessmentOutcome ||= "";
@@ -23,6 +28,17 @@ export default function OnboardContractorButton(props) {
 
     formData.ContractStartDate = formData.ExtensionorStartDate;
     formData.ContractEndDate = formData.EndDate;
+
+    formData.CurrentlyEmployed =
+      new Date() > new Date(formData.ExtensionorStartDate) &&
+      new Date() < new Date(formData.EndDate)
+        ? "Yes"
+        : "No";
+
+    formData.POStatus =
+      new Date() < new Date(formData.ExtensionorStartDate) ? "Pending" : "Open";
+
+    formData.CompanyName = formData.CompanyNameIfOutsideIR35;
 
     delete formData.ID;
     formData.LineManager = formData.HiringManagerLineManager ||= "";

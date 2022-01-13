@@ -15,7 +15,7 @@ function doGet(e) {
 
   return template
     .evaluate()
-    .setTitle("Central Governance Tool")
+    .setTitle("GDS Business Operations Tool")
     .setSandboxMode(HtmlService.SandboxMode.IFRAME)
     .setFaviconUrl(
       "https://jobs.mindtheproduct.com/wp-content/uploads/company_logos/2017/03/gds-logo.png"
@@ -28,7 +28,9 @@ function getStructureData() {
 
   const user = Session.getActiveUser().getEmail();
   const permissionData = getRows(db, "Permissions", [], { UserEmail: user });
-  let userType = permissionData[0] ? permissionData[0].RoleType : "GDS User";
+  let userType = permissionData[0]
+    ? permissionData[0].RoleType + "#GDS User"
+    : "GDS User";
   const accessibleMode = permissionData[0]
     ? permissionData[0].AccessibleMode
     : true;
@@ -61,7 +63,7 @@ function getStructureData() {
 }
 
 function checkUserAccess(userTypesAccessString, userTypeListString) {
-  if (userTypeListString === "Master") return true;
+  if (userTypeListString.includes("Master")) return true;
   const userTypes = userTypeListString.split("#");
   return userTypes.some((type) => userTypesAccessString.includes(type));
 }
@@ -71,9 +73,11 @@ function getViewData(schemasToFetch) {
   const user = Session.getActiveUser().getEmail();
 
   const userPermissions = getRows(db, "Permissions", [], { UserEmail: user });
-  const { Group, Team, RoleType } = userPermissions[0]
+  let { Group, Team, RoleType } = userPermissions[0]
     ? userPermissions[0]
-    : { Group: "null", Team: "null", RoleType: "GDS User" };
+    : { Group: "null", Team: "null", RoleType: "" };
+
+  RoleType = RoleType + "#GDS User";
 
   const userData = getRows(db, "Civil Servants", ["FullName"], {
     Email: user,
@@ -153,11 +157,11 @@ function getViewData(schemasToFetch) {
             "CreatedAt",
             "UpdatedBy",
             "UpdatedAt",
-          ]).filter(
+          ]) /*.filter(
             (row) =>
               (Group === "All" || Group.includes(row.Group)) &&
               (Team === "All" || Team.includes(row.Team))
-          ),
+          )*/,
           schema: schema,
         };
         break;
@@ -221,6 +225,15 @@ function getViewData(schemasToFetch) {
           budget: getRows(rAndRSpreadsheet, "Budget Data"),
         };
         break;
+      case "Org Design Schema":
+        const orgDesignSheet = open(orgDesignId);
+        returnObject[schemaName] = {
+          data: getRows(orgDesignSheet, "New Current Pay Mapping").concat(
+            getRows(orgDesignSheet, "New Roles")
+          ),
+          schema: [],
+        };
+        break;
       case "Workforce Plan Schema":
         returnObject[schemaName] = {
           data: getRows(db, "Workforce Plan").filter(
@@ -268,7 +281,7 @@ function getViewData(schemasToFetch) {
   return JSON.stringify(returnObject);
 }
 
-function updateData({ sheetName, updateObject }) {
+function updateDataGs({ sheetName, updateObject, emailObject }) {
   let sheetId, updateCondition;
   switch (sheetName) {
     case "GDS Data":
@@ -277,6 +290,7 @@ function updateData({ sheetName, updateObject }) {
       break;
     case "R&R Requests":
       sheetId = rAndRId;
+      updateCondition = { ID: updateObject.ID };
       break;
     default:
       sheetId = currentSpreadsheetId;
@@ -286,7 +300,15 @@ function updateData({ sheetName, updateObject }) {
 
   var db = open(sheetId);
   if (updateObject.ID) {
-    updateRow(db, sheetName, updateObject, updateCondition);
+    const updateAllowed = checkIfUpdateAllowed(sheetName, updateObject);
+    if (updateAllowed) {
+      updateRow(db, sheetName, updateObject, updateCondition);
+      if (emailObject) {
+        sendEmail(emailObject);
+      }
+    } else {
+      throw new Error("Update not permitted");
+    }
   } else {
     const properties = PropertiesService.getScriptProperties();
     let id = properties.getProperty(sheetName);
@@ -301,6 +323,58 @@ function updateData({ sheetName, updateObject }) {
     insertRow(db, sheetName, updateObject);
   }
   return updateObject.ID.toString();
+}
+
+function checkIfUpdateAllowed(sheetName, updateObject) {
+  var user = Session.getActiveUser().getEmail();
+  const currentDb = open(currentSpreadsheetId);
+  const userPermissions = getRows(currentDb, "Permissions", [], {
+    UserEmail: user,
+  });
+  let { RoleType } = userPermissions[0] ? userPermissions[0] : { RoleType: "" };
+
+  RoleType = RoleType + "#GDS User";
+
+  if (RoleType !== "#GDS User") return true;
+
+  const sheetToSchema = {
+    "Civil Servants": { schemaName: "CS Schema" },
+    Contractors: { schemaName: "Contractors Schema" },
+    "CS Vacancies": { schemaName: "CS Vacancies Schema" },
+    "Contractor Vacancies": { schemaName: "Contractor Vacancies Schema" },
+    "L&D Requests": { schemaName: "L&D Schema" },
+    Deliverables: { schemaName: "Deliverables Schema" },
+    "Workforce Plan Changes": { schemaName: "Workforce Plan Changes Schema" },
+    "Workforce Plan": { schemaName: "Workforce Plan Changes" },
+    "Commissioning Data": { schemaName: "Commissioning Schema" },
+    "R&R Requests": {
+      schemaName: "R&R Schema",
+      url: "https://docs.google.com/spreadsheets/d/1MXOA-UJTse7xPBvnMxp1wXG9TXcssUdJCzNlz55UrF4/edit#gid=932100350",
+    },
+  };
+
+  const schemaDb = sheetToSchema[sheetName]?.url
+    ? open(sheetToSchema[sheetName].url)
+    : currentDb;
+  const schema = getRows(schemaDb, sheetToSchema[sheetName].schemaName);
+  const editObject = schema.reduce((object, row) => {
+    object[normalize_(row.Field)] = row.Update;
+    return object;
+  }, {});
+
+  const userTypeList = RoleType.split("#").filter((type) => type);
+
+  return Object.keys(updateObject).every((key) => {
+    if (
+      ["UpdatedAt", "UpdatedBy", "ID"].includes(key) ||
+      key.includes("UpdatedAt") ||
+      key.includes("UpdatedBy")
+    )
+      return true;
+    return userTypeList.some((roleType) => {
+      return editObject[key].includes(roleType);
+    });
+  });
 }
 
 function createPermissionsDict() {

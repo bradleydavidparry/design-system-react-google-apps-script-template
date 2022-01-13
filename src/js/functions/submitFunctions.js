@@ -1,4 +1,8 @@
-import { formatDateTime, formatDate } from "./utilities";
+import {
+  formatDateTime,
+  formatDate,
+  getFirstNameFromGdsEmail,
+} from "./utilities";
 import { convertDatesForSingleRow } from "./dataProcessing";
 
 const checkErrors = (inputs) => {
@@ -9,13 +13,17 @@ const checkErrors = (inputs) => {
     formData,
     isRevealConditionMet,
     setErrors,
+    userType,
   } = inputs;
 
   const newErrors = {};
+
   splitFields.forEach((field) => {
     var normalisedFieldName = normalise(field);
     if (
       schema[field].Required &&
+      (schema[field].Update?.includes(userType) ||
+        schema[field].Create?.includes(userType)) &&
       !["Record List", "Comment"].includes(schema[field].Type) &&
       !formData[normalisedFieldName] &&
       formData[normalisedFieldName] !== 0 &&
@@ -60,6 +68,7 @@ const updateData = (inputs, goBack) => {
     let normalisedFieldName = normalise(field);
     if (
       schema[field].TimeStamp &&
+      updateObject[normalisedFieldName] &&
       updateObject[normalisedFieldName] !== record[normalisedFieldName]
     ) {
       updateObject[`${normalisedFieldName}UpdatedAt`] = updateTime;
@@ -97,7 +106,48 @@ const updateData = (inputs, goBack) => {
 
   const sheetName = extractSheetName(DataSheetName, updateObject);
 
-  console.log({ sheetName, updateObject });
+  let emailObject;
+
+  switch (sheetName) {
+    case "L&D Requests":
+      if (updateObject.DirectorApproved === "Approved") {
+        emailObject = {
+          template: "L&D Approval Message",
+          infoObject: {
+            ...updateObject,
+            CreatedBy: record.CreatedBy,
+            recipientName: getFirstNameFromGdsEmail(record.CreatedBy),
+          },
+        };
+      }
+      break;
+    case "R&R Requests":
+      if (updateObject.DirectorApproved === "Approved") {
+        emailObject = {
+          template: "R&R Approval Message",
+          infoObject: {
+            ...updateObject,
+            CreatedBy: record.CreatedBy,
+            NomineesFullName: record.NomineesFullName,
+            recipientName: getFirstNameFromGdsEmail(record.CreatedBy),
+          },
+        };
+      }
+      if (updateObject.PaperworkProcessed === "Yes") {
+        emailObject = {
+          template: "R&R Actioned Message",
+          infoObject: {
+            ...updateObject,
+            CreatedBy: record.CreatedBy,
+            NomineesFullName: record.NomineesFullName,
+            recipientName: getFirstNameFromGdsEmail(record.CreatedBy),
+          },
+        };
+      }
+      break;
+    default:
+      break;
+  }
 
   google.script.run
     .withSuccessHandler((id) => {
@@ -121,7 +171,7 @@ const updateData = (inputs, goBack) => {
     .withFailureHandler((err) => {
       console.log(err);
     })
-    .updateData({ sheetName, updateObject });
+    .updateDataGs({ sheetName, updateObject, emailObject });
 };
 
 const submit = (inputs, goBack = true) => {
@@ -155,6 +205,10 @@ function createNewVacancySubmit(inputs) {
   if (inputs.formData.EmploymentStatus) {
     inputs.DataSheetName = "CS Vacancies";
     inputs.Schemas = "CS Vacancies Schema";
+
+    inputs.formData.ForecastAnnualSalary =
+      inputs.lookups.rateCard[inputs.formData.Payband];
+
     submit(inputs, !inputs.formData.BusinessCaseLink ? true : false);
   }
 
@@ -233,7 +287,10 @@ function onboardCivilServant(inputs) {
         setDataObject(newDataObject);
         updateData(inputs, true);
       })
-      .updateData({
+      .withFailureHandler((e) => {
+        console.log(e);
+      })
+      .updateDataGs({
         sheetName: "CS Vacancies",
         updateObject: {
           ID: formData.VacancyID,
@@ -265,7 +322,10 @@ function approveWorkforcePlanChanges(inputs) {
       setDataObject(newDataObject);
       submit(inputs);
     })
-    .updateData({
+    .withFailureHandler((e) => {
+      console.log(e);
+    })
+    .updateDataGs({
       sheetName: "Workforce Plan",
       updateObject: {
         ID: formData.RoleID,
@@ -338,7 +398,10 @@ function onboardContractorVacancy(inputs) {
           setDataObject(newDataObject);
           updateData(inputs, true);
         })
-        .updateData({
+        .withFailureHandler((e) => {
+          console.log(e);
+        })
+        .updateDataGs({
           sheetName: "Contractor Vacancies",
           updateObject: {
             ID: formData.VacancyID,
@@ -369,13 +432,36 @@ function submitBusinessManagerView(inputs) {
   submit(inputs);
 }
 
+function submitRAndRSection(inputs) {
+  if (
+    inputs.formData.IsthisaBonusorVouchernomination === "Bonus" &&
+    inputs.formData.DateActioned &&
+    inputs.formData.LetterSent
+  ) {
+    inputs.formData.PaperworkProcessed = "Yes";
+  }
+  if (
+    inputs.formData.IsthisaBonusorVouchernomination === "Voucher" &&
+    inputs.formData.DateActioned
+  ) {
+    inputs.formData.PaperworkProcessed = "Yes";
+  }
+  submit(inputs);
+}
+
 function getSubmitFunction(viewName) {
   switch (viewName) {
+    case "Submit New R&R Request":
+    case "R&R Pending Approval":
+    case "R&R Ready For Processing":
+    case "R&R Completed Requests":
+      return submitRAndRSection;
     case "Business Manager View":
       return submitBusinessManagerView;
     case "Requested Changes":
       return approveWorkforcePlanChanges;
     case "Create New Vacancy":
+    case "Request New Vacancy":
       return createNewVacancySubmit;
     case "Onboard Civil Servant":
       return onboardCivilServant;

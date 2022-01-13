@@ -24,7 +24,10 @@ export default function RequestExtensionButton(props) {
     delete extensionData.ContractEndDate;
     extensionData.ContractStatus = "Extension";
     let query = new URLSearchParams(extensionData).toString();
-    history.push(`/contractors/request-contractor-extension/add_new?${query}`);
+
+    history.push(
+      `/contracting-requirements/create-new-contracting-requirement/add_new?${query}`
+    );
   };
 
   if (checkUserAccess("Business Manager", userType) || formData.ID)

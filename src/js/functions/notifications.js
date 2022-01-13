@@ -41,9 +41,13 @@ function createNotificationsObject(sectionName, dataObject) {
           (object, row) => {
             if (
               row.RequirementFilled === "No" &&
+              row.FinanceApproved === "Approved" &&
               row.Recruiter === "Unassigned"
             ) {
               object["Live CS Vacancies"] += 1;
+            }
+            if (row.FinanceApproved === "For Review") {
+              object["Vacancies For Approval"] += 1;
             }
             if (
               row.RequirementFilled === "No" &&
@@ -59,7 +63,28 @@ function createNotificationsObject(sectionName, dataObject) {
             }
             return object;
           },
-          { "Live CS Vacancies": 0, "Vetting and Onboarding": 0 }
+          {
+            "Live CS Vacancies": 0,
+            "Vetting and Onboarding": 0,
+            "Vacancies For Approval": 0,
+          }
+        );
+      }
+      break;
+    case "Reward & Recognition":
+      if (dataObject["R&R Schema"]) {
+        notificationsObject = dataObject["R&R Schema"].data.reduce(
+          (object, row) => {
+            object["R&R Pending Approval"] +=
+              row.DirectorApproved === "For Review" ? 1 : 0;
+            object["R&R Ready For Processing"] +=
+              row.DirectorApproved === "Approved" &&
+              row.PaperworkProcessed === "No"
+                ? 1
+                : 0;
+            return object;
+          },
+          { "R&R Pending Approval": 0, "R&R Ready For Processing": 0 }
         );
       }
       break;

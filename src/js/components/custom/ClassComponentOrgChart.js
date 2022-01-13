@@ -10,7 +10,23 @@ export default class ClassComponentOrgChart extends React.Component {
       downloadingChart: false,
       config: {},
       highlightPostNumbers: [1],
+      colorObject: props.colorObject,
     };
+  }
+
+  // shouldComponentUpdate(nextProps, nextState) {
+  //   console.log({ nextProps, nextState });
+  //   return this.state.currentOrgChartName !== nextProps.currentOrgChartName;
+  // }
+
+  componentWillReceiveProps(nextProps) {
+    // You don't have to do this check first, but it can help prevent an unneeded render
+    if (
+      nextProps.tree.id !== this.state.tree.id ||
+      nextProps.tree.heirachyField !== this.state.tree.heirachyField
+    ) {
+      this.setState({ tree: nextProps.tree });
+    }
   }
 
   handleDownload = () => {
@@ -31,8 +47,19 @@ export default class ClassComponentOrgChart extends React.Component {
     document.getElementById("svg").setAttribute("viewBox", "0 0 930 800");
   }
 
+  componentDidUpdate(prevProps, prevState) {
+    document.getElementById("svg").setAttribute("height", 800);
+    document.getElementById("svg").setAttribute("viewBox", "0 0 930 800");
+  }
+
+  reset = () => {
+    this.forceUpdate();
+  };
+
+  //{Object.keys(this.state.colorObject).map((key) => key)}
+
   render() {
-    const { tree, downloadingChart } = this.state;
+    const { tree, downloadingChart, colorObject } = this.state;
 
     //For downloading org chart as image or pdf based on id
     const downloadImageId = "download-image";
@@ -72,6 +99,32 @@ export default class ClassComponentOrgChart extends React.Component {
             </button>
             {downloadingChart && <div>Downloading chart</div>}
           </div>
+
+          {/*<div className="color-key">
+            <div
+              style={{ display: "flex", height: "40px", position: "relative" }}
+            >
+              {Object.keys(colorObject).map((key) => {
+                if (!key) return null;
+                return (
+                  <>
+                    <div>{key}</div>
+                    <div
+                      style={{
+                        backgroundColor: colorObject[key],
+                        height: "10px",
+                        width: "10px",
+                        margin: "0",
+                        transform: "translateY(-50%)",
+                        position: "absolute",
+                        top: "50%",
+                      }}
+                    ></div>
+                  </>
+                );
+              })}
+            </div>
+          </div>*/}
 
           <OrgChart
             tree={tree}

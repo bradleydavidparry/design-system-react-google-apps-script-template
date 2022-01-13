@@ -4,15 +4,6 @@ module.exports = exportOrgChartImage;
 
 function exportOrgChartImage({ loadConfig }) {
   const config = loadConfig();
-  // console.log(config);
-
-  // const config = {
-  //   id: "#react-org-chart",
-  //   downlowdedOrgChart: null,
-  //   nodeLeftX: 15955.25,
-  //   nodeRightX: 25236.75,
-  //   nodeY: 1980,
-  // };
 
   const { id, downlowdedOrgChart, nodeLeftX, nodeRightX, nodeY } = config;
   var w = nodeLeftX + nodeRightX;

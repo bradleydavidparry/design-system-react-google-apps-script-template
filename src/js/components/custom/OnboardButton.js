@@ -22,6 +22,7 @@ export default function OnboardButton(props) {
       "O) Offer Accepted",
       "Q) Paycase Approval",
       "R) Vetting In Progress",
+      "T) In Post",
     ].includes(formData.Status)
   )
     return null;

@@ -86,7 +86,8 @@ function render(config) {
     .attr("width", nodeWidth)
     .attr("height", nodeHeight)
     .attr("fill", backgroundColor)
-    .attr("stroke", borderColor)
+    .attr("stroke", (d) => d.person.colour)
+    .attr("stroke-width", "5px")
     .attr("rx", nodeBorderRadius)
     .attr("ry", nodeBorderRadius)
     .attr("fill-opacity", 0.05)
@@ -101,7 +102,8 @@ function render(config) {
     .attr("height", nodeHeight)
     .attr("id", (d) => d.id)
     .attr("fill", backgroundColor)
-    .attr("stroke", borderColor)
+    .attr("stroke", (d) => d.person.colour)
+    .attr("stroke-width", "5px")
     .attr("rx", nodeBorderRadius)
     .attr("ry", nodeBorderRadius)
     .style("cursor", helpers.getCursorForNode);
@@ -126,7 +128,7 @@ function render(config) {
     .style("cursor", "pointer")
     .style("fill", nameColor)
     .style("font-size", 14)
-    .text((d) => d.person.name);
+    .text((d) => `${d.person.name} (${d.person.payband})`);
   // .on('click', onParentClick(config))
 
   // Person's Title
@@ -134,14 +136,15 @@ function render(config) {
     .append("text")
     .attr("class", PERSON_TITLE_CLASS + " unedited")
     .attr("x", nodeWidth / 2)
-    .attr("y", namePos.y + nodePaddingY * 2.4)
+    .attr("y", namePos.y + nodePaddingY * 2.9)
     .attr("dy", "0.1em")
     .style("font-size", 12)
     .style("cursor", "pointer")
     .style("fill", titleColor)
     .text((d) => d.person.title);
+  //.text((d) => `(${d.person.payband}) ${d.person.title}`);
 
-  const heightForTitle = 60; // getHeightForText(d.person.title)
+  const heightForTitle = 75; // getHeightForText(d.person.title)
 
   // Person's Reports
   nodeEnter
@@ -165,6 +168,7 @@ function render(config) {
     .attr("x", avatarPos.x)
     .attr("y", avatarPos.y)
     .attr("stroke", borderColor)
+    .attr("stroke-width", "5px")
     // .attr("s", (d) => {
     //   d.person.hasImage
     //     ? d.person.avatar
@@ -210,7 +214,7 @@ function render(config) {
   nodeUpdate
     .select("rect.box")
     .attr("fill", backgroundColor)
-    .attr("stroke", borderColor);
+    .attr("stroke", (d) => d.person.colour);
 
   // Transition exiting nodes to the parent's new position.
   const nodeExit = node

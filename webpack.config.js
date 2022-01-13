@@ -51,6 +51,7 @@ module.exports = {
     new HtmlWebpackInlineSourcePlugin(),
     new CopyPlugin([
       "code.js",
+      "emails.js",
       "urls.js",
       "objDB.js",
       "appsscript.json",

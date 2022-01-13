@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import {
-  // HashRouter as Router,
   BrowserRouter as Router,
   Switch,
   Route,
@@ -18,6 +17,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [sections, setSections] = useState([]);
   const [defaultSection, setDefaultSection] = useState(null);
+  const [defaultView, setDefaultView] = useState(null);
   const [pageTitle, setPageTitle] = useState("");
   const [dataObject, setDataObject] = useState({});
   const [filterObject, setFilterObject] = useState({
@@ -53,6 +53,7 @@ function App() {
         setUserType,
         linkifyName,
         setDefaultSection,
+        setDefaultView,
         setUser,
         setLoading,
         setLookups,
@@ -66,7 +67,7 @@ function App() {
     title: loading ? "Fetching data" : pageTitle,
     strapline: "",
     header: {
-      serviceName: "Central Governance Tool",
+      serviceName: "GDS Business Operations Tool",
       sections,
     },
     footer: {},
@@ -81,7 +82,13 @@ function App() {
             <Route
               exact
               path="/userCodeAppPanel"
-              render={() => <Redirect to={`${defaultSection}`} />}
+              render={() => (
+                <Redirect
+                  to={`${defaultSection}${
+                    defaultView ? `/${defaultView}` : ""
+                  }`}
+                />
+              )}
             />
             {Object.keys(sections).map((section) => (
               <Route key={section} path={`/${linkifyName(section)}`}>

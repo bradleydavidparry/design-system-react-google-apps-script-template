@@ -2,14 +2,8 @@ import React, { useContext, useState, useEffect } from "react";
 import AppContext from "../../views/AppContext";
 // import OrgChart from "@unicef/react-org-chart";
 import ClassComponentOrgChart from "./ClassComponentOrgChart";
-import {
-  DataList,
-  InsetText,
-  Hint,
-  PhaseBanner,
-  Details,
-} from "../../../govuk";
-import { Link } from "react-router-dom";
+import { DataList, Select } from "../../../govuk";
+import { normalise } from "../../functions/utilities";
 
 function recursiveAddChild(
   object,
@@ -17,10 +11,12 @@ function recursiveAddChild(
   lmObject,
   infoObject,
   colourCharacteristic,
-  colourObject
+  colourObject,
+  heirachyField
 ) {
   return {
     id: personId,
+    heirachyField,
     person: {
       id: personId,
       department: infoObject[personId].Group,
@@ -57,20 +53,30 @@ function createTree(
   data,
   currentOrgChartName,
   colourCharacteristic,
-  colourObject
+  colourObject,
+  heirachyField
 ) {
-  const nameToId = data.reduce((object, person) => {
+  const normalisedHeirarchyField = normalise(heirachyField);
+
+  const modifiedData = data.map((row) => {
+    row.NewSubTeam ||= row.SubTeam;
+    row.NewLineManager ||= row.InternalDataLineManager;
+    row.ActivityManager ||= row.InternalDataLineManager;
+    return row;
+  });
+
+  const nameToId = modifiedData.reduce((object, person) => {
     object[person.FullName] = person.ID;
     return object;
   }, {});
   const currentOrgChartId = nameToId[currentOrgChartName];
-  const infoObject = data.reduce((object, person) => {
+  const infoObject = modifiedData.reduce((object, person) => {
     object[person.ID] = person;
     return object;
   }, {});
-  const lmObject = data.reduce((object, person) => {
-    object[nameToId[person.InternalDataLineManager]] ||= [];
-    object[nameToId[person.InternalDataLineManager]].push(person.ID);
+  const lmObject = modifiedData.reduce((object, person) => {
+    object[nameToId[person[normalisedHeirarchyField]]] ||= [];
+    object[nameToId[person[normalisedHeirarchyField]]].push(person.ID);
     return object;
   }, {});
 
@@ -80,40 +86,20 @@ function createTree(
     lmObject,
     infoObject,
     colourCharacteristic,
-    colourObject
+    colourObject,
+    heirachyField
   );
 
   return tree;
 }
 
-function AccessibleOrgChart(props) {
-  const { tree } = props;
-  // if (tree.children.length === 0)
-  //   return (
-  //     <>{`${tree.person.name} - ${tree.person.payband} - ${tree.person.title} - ${tree.person.department}`}</>
-  //   );
-  return (
-    <Details
-      summaryChildren={`${tree.person.name} - ${tree.person.payband} - ${tree.person.title} - ${tree.person.department}`}
-    >
-      {tree.children.map((child, i) => {
-        return (
-          <AccessibleOrgChart key={`${tree.person.name}${i}`} tree={child} />
-        );
-      })}
-    </Details>
-  );
-}
-
-export default function GdsOrgChart(props) {
+export default function OrgDesignOrgChart(props) {
   const { dataObject } = useContext(AppContext);
   const [currentOrgChartName, setCurrentOrgChartName] = useState("Tom Read");
   const [colourCharacteristic, setColourCharacteristic] = useState("Payband");
+  const [hierarchyField, setHierarchyField] = useState("New Line Manager");
 
-  const currentlyEmployedCivilServants = dataObject["CS Schema"].data.filter(
-    (person) =>
-      person.CurrentlyEmployed === "Yes" && person.OnLoanSecOut === "No"
-  );
+  const currentlyEmployedCivilServants = dataObject["Org Design Schema"].data;
   const colours = [
     "#4e79a7",
     "#f28e2c",
@@ -126,29 +112,6 @@ export default function GdsOrgChart(props) {
     "#9c755f",
     "#bab0ab",
   ];
-
-  // const colours = [
-  //   "#e6194b",
-  //   "#3cb44b",
-  //   "#ffe119",
-  //   "#4363d8",
-  //   "#f58231",
-  //   "#911eb4",
-  //   "#46f0f0",
-  //   "#f032e6",
-  //   "#bcf60c",
-  //   "#fabebe",
-  //   "#008080",
-  //   "#e6beff",
-  //   "#9a6324",
-  //   "#fffac8",
-  //   "#800000",
-  //   "#aaffc3",
-  //   "#808000",
-  //   "#ffd8b1",
-  //   "#000075",
-  //   "#808080",
-  // ];
 
   const colourObject = currentlyEmployedCivilServants
     .reduce((array, row) => {
@@ -167,7 +130,8 @@ export default function GdsOrgChart(props) {
       currentlyEmployedCivilServants,
       currentOrgChartName,
       colourCharacteristic,
-      colourObject
+      colourObject,
+      hierarchyField
     )
   );
 
@@ -186,54 +150,42 @@ export default function GdsOrgChart(props) {
     setCurrentOrgChartName(value);
   };
 
+  const handleHierarchyChange = (e) => {
+    const { value } = e.target;
+    setHierarchyField(value);
+  };
+
   useEffect(() => {
     setTree(
       createTree(
         currentlyEmployedCivilServants,
         currentOrgChartName,
         colourCharacteristic,
-        colourObject
+        colourObject,
+        hierarchyField
       )
     );
-  }, [currentOrgChartName]);
+  }, [currentOrgChartName, hierarchyField]);
 
   return (
     <>
-      <PhaseBanner
-        tag={{
-          children: "under construction",
+      <Select
+        items={[
+          {
+            children: "New Line Manager",
+            value: "New Line Manager",
+          },
+          {
+            children: "Activity Manager",
+            value: "Activity Manager",
+          },
+        ]}
+        label={{
+          children: "Hierarchy select",
         }}
-      >
-        This feature is a work in progress.
-      </PhaseBanner>
-      <br />
-      <p>
-        This org chart currently includes employed civil servants only and is
-        generated by the 'Internal Data Line Manager' field which business
-        managers can update in the{" "}
-        <Link to="/civil-servants/business-manager-view">
-          Business Manager View
-        </Link>
-        .
-      </p>
-      <InsetText>
-        <p>
-          This org chart does <strong>not</strong> show the SOP line management
-          structure, and updating the 'Internal Data Line Manager' field will{" "}
-          <strong>not</strong> update SOP.
-        </p>
-        <br />
-        <p>
-          <strong>
-            Line managers are responsible for keeping the line management
-            structure on SOP accurate, as per Cabinet Office HR policy.
-          </strong>
-        </p>
-      </InsetText>
-      <Hint>
-        Click on an individual with line reports to expand and collapse them.
-        The image and PDF exports might struggle with very large trees.
-      </Hint>
+        value={hierarchyField}
+        onChange={handleHierarchyChange}
+      />
       <DataList
         label={{
           children: "Select Person",
@@ -247,16 +199,6 @@ export default function GdsOrgChart(props) {
         defaultValue={currentOrgChartName}
       />
       <ClassComponentOrgChart tree={tree} colorObject={colourObject} />
-      <div class="govuk-grid-row" style={{ marginTop: "30px" }}>
-        <div class="govuk-grid-column-full">
-          <h3>Accessible Org Chart</h3>
-        </div>
-      </div>
-      <div class="govuk-grid-row" style={{ marginTop: "30px" }}>
-        <div class="govuk-grid-column-full">
-          <AccessibleOrgChart tree={tree} />
-        </div>
-      </div>
     </>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import InternalMoves from "./custom/InternalMoves";
+import SubTeamSelect from "./custom/SubTeamSelect";
 import {
   Button,
   Input,
@@ -189,6 +190,13 @@ function FormEntry(props) {
                 updateFormData={updateFormData}
               />
             );
+          case "Sub Team ID":
+            return (
+              <SubTeamSelect
+                formData={formData}
+                updateFormData={updateFormData}
+              />
+            );
           default:
             break;
         }
@@ -254,6 +262,7 @@ function FormEntry(props) {
                 source={suggest}
                 onConfirm={dataListHandleChange}
                 name={normalisedFieldName}
+                hint={hint ? { children: hint } : null}
                 displayMenu={"overlay"}
                 confirmOnBlur={false}
                 errorMessage={
@@ -594,7 +603,6 @@ function FormEntry(props) {
       if (schema[fieldName].OptionsSchema) {
         const [, schemaName, id, primaryField, path, , ...fields] =
           schema[fieldName].OptionsSchema.split("#");
-        //const filterObject = parseFilterString(filterString);
         const filterField =
           schema[fieldName].Type === "Data List" ? normalise(primaryField) : id;
         const value = dataObject[schemaName].data.filter(
