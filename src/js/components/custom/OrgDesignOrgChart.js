@@ -140,9 +140,9 @@ export default function OrgDesignOrgChart(props) {
       (person) => person.FullName
     );
     const loweCaseQuery = query.toLowerCase();
-    const filteredResults = results.filter(
-      (result) => result.toLowerCase().indexOf(loweCaseQuery) !== -1
-    );
+    const filteredResults = results.filter((result) => {
+      return result?.toLowerCase().indexOf(loweCaseQuery) !== -1;
+    });
     populateResults(filteredResults);
   }
 

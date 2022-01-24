@@ -96,7 +96,7 @@ function AccessibleOrgChart(props) {
     <Details
       summaryChildren={`${tree.person.name} - ${tree.person.payband} - ${tree.person.title} - ${tree.person.department}`}
     >
-      {tree.children.map((child, i) => {
+      {tree.children?.map((child, i) => {
         return (
           <AccessibleOrgChart key={`${tree.person.name}${i}`} tree={child} />
         );
@@ -177,7 +177,7 @@ export default function GdsOrgChart(props) {
     );
     const loweCaseQuery = query.toLowerCase();
     const filteredResults = results.filter(
-      (result) => result.toLowerCase().indexOf(loweCaseQuery) !== -1
+      (result) => result?.toLowerCase().indexOf(loweCaseQuery) !== -1
     );
     populateResults(filteredResults);
   }
@@ -247,13 +247,13 @@ export default function GdsOrgChart(props) {
         defaultValue={currentOrgChartName}
       />
       <ClassComponentOrgChart tree={tree} colorObject={colourObject} />
-      <div class="govuk-grid-row" style={{ marginTop: "30px" }}>
-        <div class="govuk-grid-column-full">
+      <div className="govuk-grid-row" style={{ marginTop: "30px" }}>
+        <div className="govuk-grid-column-full">
           <h3>Accessible Org Chart</h3>
         </div>
       </div>
-      <div class="govuk-grid-row" style={{ marginTop: "30px" }}>
-        <div class="govuk-grid-column-full">
+      <div className="govuk-grid-row" style={{ marginTop: "30px" }}>
+        <div className="govuk-grid-column-full">
           <AccessibleOrgChart tree={tree} />
         </div>
       </div>

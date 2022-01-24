@@ -58,7 +58,7 @@ export default function HomePage(props) {
           return {
             content: {
               children: [
-                <ul>
+                <ul key={section}>
                   {sections[section].map((view) => {
                     return (
                       <li style={{ marginLeft: "30px" }} key={view.Name}>

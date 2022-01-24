@@ -1,5 +1,6 @@
 import React from "react";
 import OrgChart from "../../../orgchart";
+import { Button } from "../../../govuk";
 import "../../../css/org-chart.css";
 
 export default class ClassComponentOrgChart extends React.Component {
@@ -77,26 +78,32 @@ export default class ClassComponentOrgChart extends React.Component {
           }}
         >
           <div className="zoom-buttons">
-            <button
-              className="btn btn-outline-primary zoom-button"
+            <Button
+              className="govuk-button--secondary btn btn-outline-primary zoom-button"
               id="zoom-in"
             >
               +
-            </button>
-            <button
-              className="btn btn-outline-primary zoom-button"
+            </Button>
+            <Button
+              className="govuk-button--secondary btn btn-outline-primary zoom-button"
               id="zoom-out"
             >
               -
-            </button>
+            </Button>
           </div>
           <div className="download-buttons">
-            <button className="btn btn-outline-primary" id="download-image">
+            <Button
+              className="govuk-button--secondary btn btn-outline-primary"
+              id="download-image"
+            >
               Download as image
-            </button>
-            <button className="btn btn-outline-primary" id="download-pdf">
+            </Button>
+            <Button
+              className="govuk-button--secondary btn btn-outline-primary"
+              id="download-pdf"
+            >
               Download as PDF
-            </button>
+            </Button>
             {downloadingChart && <div>Downloading chart</div>}
           </div>
 

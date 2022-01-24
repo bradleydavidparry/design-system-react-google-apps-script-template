@@ -3,10 +3,15 @@ function doGet(e) {
 
   var user = Session.getActiveUser().getEmail();
 
-  if (user !== "bradley.parry@digital.cabinet-office.gov.uk") {
-    var sheet = SpreadsheetApp.openById(trackingSheetId).getSheetByName(
-      "Central Governance Tool"
-    );
+  if (
+    ![
+      "bradley.parry@digital.cabinet-office.gov.uk",
+      "jas.sahota@digital.cabinet-office.gov.uk",
+      "amal.abdulahi@digital.cabinet-office.gov.uk",
+    ].includes(user)
+  ) {
+    var sheet =
+      SpreadsheetApp.openById(trackingSheetId).getSheetByName("Usage Data");
     sheet.appendRow([
       user.replace("@digital.cabinet-office.gov.uk", "").replace(".", " "),
       new Date(),
@@ -321,6 +326,9 @@ function updateDataGs({ sheetName, updateObject, emailObject }) {
     updateObject.ID = code.slice(0, code.length - id.length) + id;
     properties.setProperty(sheetName, Number(Number(id) + 1).toFixed(0) + "");
     insertRow(db, sheetName, updateObject);
+    if (emailObject) {
+      sendEmail(emailObject);
+    }
   }
   return updateObject.ID.toString();
 }

@@ -1,8 +1,9 @@
 import {
   formatDateTime,
   formatDate,
-  getFirstNameFromGdsEmail,
+  // getFirstNameFromGdsEmail,
 } from "./utilities";
+import getEmailObject from "./emailObject";
 import { convertDatesForSingleRow } from "./dataProcessing";
 
 const checkErrors = (inputs) => {
@@ -106,48 +107,7 @@ const updateData = (inputs, goBack) => {
 
   const sheetName = extractSheetName(DataSheetName, updateObject);
 
-  let emailObject;
-
-  switch (sheetName) {
-    case "L&D Requests":
-      if (updateObject.DirectorApproved === "Approved") {
-        emailObject = {
-          template: "L&D Approval Message",
-          infoObject: {
-            ...updateObject,
-            CreatedBy: record.CreatedBy,
-            recipientName: getFirstNameFromGdsEmail(record.CreatedBy),
-          },
-        };
-      }
-      break;
-    case "R&R Requests":
-      if (updateObject.DirectorApproved === "Approved") {
-        emailObject = {
-          template: "R&R Approval Message",
-          infoObject: {
-            ...updateObject,
-            CreatedBy: record.CreatedBy,
-            NomineesFullName: record.NomineesFullName,
-            recipientName: getFirstNameFromGdsEmail(record.CreatedBy),
-          },
-        };
-      }
-      if (updateObject.PaperworkProcessed === "Yes") {
-        emailObject = {
-          template: "R&R Actioned Message",
-          infoObject: {
-            ...updateObject,
-            CreatedBy: record.CreatedBy,
-            NomineesFullName: record.NomineesFullName,
-            recipientName: getFirstNameFromGdsEmail(record.CreatedBy),
-          },
-        };
-      }
-      break;
-    default:
-      break;
-  }
+  const emailObject = getEmailObject(sheetName, updateObject, record);
 
   google.script.run
     .withSuccessHandler((id) => {

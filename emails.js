@@ -26,6 +26,25 @@ function sendEmail(emailObject) {
         noReply: true,
       });
       break;
+    case "CS Vacancy Approved Message":
+      MailApp.sendEmail({
+        to: infoObject.CreatedBy,
+        subject: `${infoObject.ID} - ${infoObject.jobTitle} - Civil Servant Vacancy Approved`,
+        htmlBody: ConvertGoogleDocToCleanHtml(csVacApprovedMessage, infoObject),
+        noReply: true,
+      });
+      break;
+    case "CS Vacancy Submitted Message":
+      MailApp.sendEmail({
+        to: "james.murphy@digital.cabinet-office.gov.uk,ajitha.jeyakumar@digital.cabinet-office.gov.uk",
+        subject: `${infoObject.jobTitle} - ${infoObject.team} - Civil Servant Vacancy Submitted`,
+        htmlBody: ConvertGoogleDocToCleanHtml(
+          csVacSubmittedMessage,
+          infoObject
+        ),
+        noReply: true,
+      });
+      break;
     default:
       break;
   }
