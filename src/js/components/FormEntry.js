@@ -507,14 +507,43 @@ function FormEntry(props) {
 
             const onClickSubTableButton = () => {
               updateFormData({});
+
+              //TEST
+              const splitCreate = create.split("=");
+              let query;
+              const additionalFieldsToSendToForm = splitCreate[1]
+                ? JSON.parse(splitCreate[1])
+                : null;
+
+              if (additionalFieldsToSendToForm) {
+                const queryObject = additionalFieldsToSendToForm.reduce(
+                  (object, field) => {
+                    if (typeof field === "string") {
+                      object[normalise(field)] = formData[normalise(field)];
+                    } else {
+                      const [fieldName, value] = field;
+                      object[normalise(fieldName)] = value;
+                    }
+                    return object;
+                  },
+                  {}
+                );
+                query = new URLSearchParams({
+                  ...queryObject,
+                }).toString();
+              }
+              //END TEST
+
               history.push(
-                `${createPath}?${normalisedFilterColumn}=${formData.ID}`
+                `${createPath}?${normalisedFilterColumn}=${formData.ID}${
+                  query ? `&${query}` : ``
+                }`
               );
             };
 
             return (
               <div className="govuk-form-group">
-                {listData.length === 0 && create === "Create" ? (
+                {listData.length === 0 && create.includes("Create") ? (
                   <Label>{fieldName}</Label>
                 ) : null}
                 {listData.length > 0 ? (
@@ -563,7 +592,7 @@ function FormEntry(props) {
                     }))}
                   />
                 ) : null}
-                {create === "Create" ? (
+                {create.includes("Create") ? (
                   <Button onClick={onClickSubTableButton}>
                     Create New {fieldName.substring(0, fieldName.length - 1)}
                   </Button>

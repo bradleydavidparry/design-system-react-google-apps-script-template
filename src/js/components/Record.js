@@ -18,7 +18,7 @@ const getCurrentRecord = (data, recordId, query, schema, splitFields) => {
     }
     return object;
   }, {});
-  return { ...query, ...defaultValues };
+  return { ...defaultValues, ...query };
 };
 
 function useQuery() {

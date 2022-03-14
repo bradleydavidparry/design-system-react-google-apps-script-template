@@ -5,6 +5,8 @@ import {
 } from "./utilities";
 import getEmailObject from "./emailObject";
 import { convertDatesForSingleRow } from "./dataProcessing";
+import { checkUserAccess } from "./utilities";
+import processFormData from "./processFormData";
 
 const checkErrors = (inputs) => {
   const {
@@ -23,8 +25,8 @@ const checkErrors = (inputs) => {
     var normalisedFieldName = normalise(field);
     if (
       schema[field].Required &&
-      (schema[field].Update?.includes(userType) ||
-        schema[field].Create?.includes(userType)) &&
+      (checkUserAccess(schema[field].Update, userType) ||
+        checkUserAccess(schema[field].Create, userType)) &&
       !["Record List", "Comment"].includes(schema[field].Type) &&
       !formData[normalisedFieldName] &&
       formData[normalisedFieldName] !== 0 &&
@@ -151,7 +153,6 @@ function createNewVacancySubmit(inputs) {
   ).toFixed(2);
   inputs.formData.Status = "E) Approved - Ready To Launch";
   inputs.formData.RequirementFilled = "No";
-  inputs.formData.CapitalRole = "No";
   inputs.formData.RollingCampaign = "No";
   inputs.formData.Recruiter = "Unassigned";
 
@@ -169,10 +170,10 @@ function createNewVacancySubmit(inputs) {
     inputs.formData.ForecastAnnualSalary =
       inputs.lookups.rateCard[inputs.formData.Payband];
 
-    submit(inputs, !inputs.formData.BusinessCaseLink ? true : false);
+    submit(inputs, !inputs.formData.LengthofContractRequest ? true : false);
   }
 
-  if (inputs.formData.BusinessCaseLink) {
+  if (inputs.formData.LengthofContractRequest) {
     inputs.DataSheetName = "Contractor Vacancies";
     inputs.Schemas = "Contractor Vacancies Schema";
 
@@ -194,12 +195,16 @@ function createNewVacancySubmit(inputs) {
     inputs.formData.MinisterialApproval = "Pending";
     inputs.formData.FinalOutcome = "Pending";
 
+    inputs.formData.FTE = 1;
+
     submit(inputs);
   }
 }
 
 function onboardCivilServant(inputs) {
-  const { dataObject, formData, setDataObject, setSubmitting, record } = inputs;
+  const { dataObject, setDataObject, setSubmitting, record, schema, lookups } =
+    inputs;
+  let { formData } = inputs;
   setSubmitting(true);
 
   if (formData.FullNameInternalCandidate) {
@@ -208,9 +213,26 @@ function onboardCivilServant(inputs) {
     delete record.EmploymentStatus;
     delete record.FTE;
     delete record.RoleID;
+    delete record.BasicSalary;
+    delete record.RRAAllowanceAnnual;
+    delete record.MiscellaneousAllowanceAnnual;
+    delete record.DDaTAllowanceAnnual;
+    delete record.EarlyTalentType;
+    delete record.Location;
+    delete record.ContractStartDate;
+    delete record.ContractEndDate;
+    delete record.DDaTCapabilityLevel;
+    delete record.VacancyID;
+    delete record.JobFamily;
   }
 
-  //New stuff
+  formData = processFormData(
+    schema,
+    formData,
+    "Onboard Civil Servant",
+    dataObject,
+    lookups
+  );
 
   const parsedStatusTimeline = new Map(JSON.parse(formData.StatusTimeline));
 
@@ -225,8 +247,6 @@ function onboardCivilServant(inputs) {
   ]);
 
   formData.StatusTimeline = JSON.stringify([...parsedStatusTimeline]);
-
-  // end new stuff
 
   const newErrors = checkErrors(inputs);
   if (Object.keys(newErrors).length > 0) {
@@ -243,8 +263,8 @@ function onboardCivilServant(inputs) {
           }
           return row;
         });
-
         setDataObject(newDataObject);
+
         updateData(inputs, true);
       })
       .withFailureHandler((e) => {
@@ -256,6 +276,7 @@ function onboardCivilServant(inputs) {
           ID: formData.VacancyID,
           RequirementFilled: "Yes",
           StatusTimeline: formData.StatusTimeline,
+          ContractStartDate: formatDate(formData.ContractStartDate),
         },
       });
   }
@@ -422,6 +443,7 @@ function getSubmitFunction(viewName) {
       return approveWorkforcePlanChanges;
     case "Create New Vacancy":
     case "Request New Vacancy":
+    case "Create New Contracting Requirement":
       return createNewVacancySubmit;
     case "Onboard Civil Servant":
       return onboardCivilServant;
@@ -430,7 +452,7 @@ function getSubmitFunction(viewName) {
     case "Vetting and Onboarding":
     case "Withdrawn CS Vacancies":
     case "All Contracting Requirements":
-    case "Contracting Review":
+    case "Planning":
     case "Approvals":
     case "Recruitment and Procurement":
     case "Onboarding":

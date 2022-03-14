@@ -1,4 +1,4 @@
-import { networkdays } from "./utilities";
+import { networkdays, formatDateInput } from "./utilities";
 
 function processFormData(schema, newFormData, viewName, dataObject, lookups) {
   if (schema["Group"]) {
@@ -140,6 +140,33 @@ function processFormData(schema, newFormData, viewName, dataObject, lookups) {
       newFormData.JobTitle = newFormData.JobTitleDDaTRole
         ? newFormData.JobTitleDDaTRole
         : newFormData.JobTitleNonDDaTRole;
+      newFormData.FinanceApproved = ["CDDO"].includes(newFormData.Group)
+        ? "Approved"
+        : "For Review";
+      break;
+    case "Create New Contracting Requirement":
+      newFormData.JobTitle = newFormData.JobTitleDDaTRole
+        ? newFormData.JobTitleDDaTRole
+        : newFormData.JobTitleNonDDaTRole;
+      break;
+    case "Contracting Requirements For Contracting Team Review":
+      newFormData.FinanceApproved =
+        newFormData.ContractingTeamApproved === "Approved" &&
+        ["CDDO"].includes(newFormData.Group)
+          ? "Approved"
+          : "For Review";
+      break;
+    case "Risks":
+      newFormData.InitialOverallScoreStatus =
+        newFormData.InitialImpactScore && newFormData.InitialLikelihoodScore
+          ? Number(newFormData.InitialImpactScore) *
+            Number(newFormData.InitialLikelihoodScore)
+          : "";
+      newFormData.ResidualOverallScoreStatus =
+        newFormData.ResidualImpactScore && newFormData.ResidualLikelihoodScore
+          ? Number(newFormData.ResidualImpactScore) *
+            Number(newFormData.ResidualLikelihoodScore)
+          : "";
       break;
     default:
       break;

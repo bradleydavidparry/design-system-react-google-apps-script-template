@@ -29,7 +29,10 @@ function recursiveAddChild(
         : "https://i.stack.imgur.com/dr5qp.jpgs",
       name: infoObject[personId].FullName,
       title: infoObject[personId].JobTitle,
-      payband: infoObject[personId].Payband,
+      payband:
+        infoObject[personId].OnTDA === "Yes"
+          ? `${infoObject[personId].TDAGrade} TDA`
+          : infoObject[personId].Payband,
       totalReports: lmObject[personId] ? lmObject[personId].length : 0,
       hasImage: true,
       colour: colourObject[infoObject[personId][colourCharacteristic]],
@@ -69,8 +72,8 @@ function createTree(
     return object;
   }, {});
   const lmObject = data.reduce((object, person) => {
-    object[nameToId[person.InternalDataLineManager]] ||= [];
-    object[nameToId[person.InternalDataLineManager]].push(person.ID);
+    object[nameToId[person.LM]] ||= [];
+    object[nameToId[person.LM]].push(person.ID);
     return object;
   }, {});
 
@@ -110,10 +113,42 @@ export default function GdsOrgChart(props) {
   const [currentOrgChartName, setCurrentOrgChartName] = useState("Tom Read");
   const [colourCharacteristic, setColourCharacteristic] = useState("Payband");
 
-  const currentlyEmployedCivilServants = dataObject["CS Schema"].data.filter(
-    (person) =>
-      person.CurrentlyEmployed === "Yes" && person.OnLoanSecOut === "No"
-  );
+  const currentlyEmployedCivilServants = dataObject["CS Schema"].data
+    .filter(
+      (person) =>
+        person.CurrentlyEmployed === "Yes" && person.OnLoanSecOut === "No"
+    )
+    .map((person) => {
+      person.LM = person.InternalDataLineManager;
+      return person;
+    });
+
+  const currentlyContractedContractors = dataObject["Contractors Schema"].data
+    .filter((person) => person.CurrentlyContracted === "Yes")
+    .map((person) => {
+      person.LM = person.LineManagerClient;
+      person.Payband = "Contractor";
+      return person;
+    });
+
+  const allVacancies = dataObject["CS Vacancies Schema"].data
+    .filter(
+      (person) =>
+        person.RequirementFilled === "No" &&
+        person.Status !== "D) Role Withdrawn"
+    )
+    .map((person) => {
+      person.LM = person.HiringManagerLineManager;
+      person.FullName = person.ID;
+      return person;
+    });
+
+  const allPeople = [
+    ...currentlyEmployedCivilServants,
+    ...currentlyContractedContractors,
+    ...allVacancies,
+  ];
+
   const colours = [
     "#4e79a7",
     "#f28e2c",
@@ -125,6 +160,7 @@ export default function GdsOrgChart(props) {
     "#ff9da7",
     "#9c755f",
     "#bab0ab",
+    "#fabebe",
   ];
 
   // const colours = [
@@ -150,7 +186,7 @@ export default function GdsOrgChart(props) {
   //   "#808080",
   // ];
 
-  const colourObject = currentlyEmployedCivilServants
+  const colourObject = allPeople
     .reduce((array, row) => {
       !array.includes(row[colourCharacteristic]) &&
         array.push(row[colourCharacteristic]);
@@ -164,7 +200,7 @@ export default function GdsOrgChart(props) {
 
   const [tree, setTree] = useState(
     createTree(
-      currentlyEmployedCivilServants,
+      allPeople,
       currentOrgChartName,
       colourCharacteristic,
       colourObject

@@ -3,6 +3,38 @@ import { getFirstNameFromGdsEmail } from "./utilities";
 function getEmailObject(sheetName, updateObject, record) {
   let emailObject;
   switch (sheetName) {
+    case "Contractor Vacancies":
+      if (!updateObject.ID) {
+        emailObject = {
+          template: "Contracting Requirement Submit Message Contracting Team",
+          infoObject: {
+            ...updateObject,
+          },
+        };
+      }
+      if (
+        updateObject.ID &&
+        updateObject.ContractingTeamApproved === "Approved" &&
+        updateObject.FinanceApproved !== "Approved"
+      ) {
+        emailObject = {
+          template: "Contracting Requirement Submit Message Finance Team",
+          infoObject: {
+            ...updateObject,
+          },
+        };
+      }
+      if (updateObject.ID && updateObject.FinanceApproved === "Approved") {
+        emailObject = {
+          template: "Contracting Requirement Approval Message",
+          infoObject: {
+            ...updateObject,
+            CreatedBy: record.CreatedBy,
+            recipientName: getFirstNameFromGdsEmail(record.CreatedBy),
+          },
+        };
+      }
+      break;
     case "L&D Requests":
       if (updateObject.ID && updateObject.DirectorApproved === "Approved") {
         emailObject = {
@@ -28,8 +60,7 @@ function getEmailObject(sheetName, updateObject, record) {
           },
         };
       }
-      if (!updateObject.ID) {
-        console.log(updateObject);
+      if (!updateObject.ID && updateObject.FinanceApproved !== "Approved") {
         emailObject = {
           template: "CS Vacancy Submitted Message",
           infoObject: {

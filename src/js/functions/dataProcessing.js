@@ -111,7 +111,10 @@ function processStructureData(object, dict) {
   const filteredViews = views.filter(
     (view) =>
       (view.Active ||
-        (["bradley.parry@digital.cabinet-office.gov.uk"].includes(user) &&
+        ([
+          "bradley.parry@digital.cabinet-office.gov.uk",
+          "jas.sahota@digital.cabinet-office.gov.uk",
+        ].includes(user) &&
           view.ActiveInDevelopment)) &&
       checkUserAccess(view["UserTypesWhoCanAccess"], userType)
   );
@@ -329,6 +332,18 @@ function customDataProcessing(schemaName, dataObject) {
         row.AmountApproved = row.ApprovedVoucherAmount
           ? row.ApprovedVoucherAmount
           : row.ApprovedBonusAmount;
+        return row;
+      });
+      return dataObject[schemaName].data;
+    case "Deliverables Schema":
+      const milestonesByParent = groupBy(
+        dataObject["Deliverables Schema"].data,
+        "ParentDeliverable"
+      );
+      dataObject[schemaName].data = dataObject[schemaName].data.map((row) => {
+        row.NumberOfMilestones = milestonesByParent[row.ID]
+          ? milestonesByParent[row.ID].length
+          : 0;
         return row;
       });
       return dataObject[schemaName].data;

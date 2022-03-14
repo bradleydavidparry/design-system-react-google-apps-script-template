@@ -2,6 +2,41 @@ function sendEmail(emailObject) {
   const { template, infoObject } = emailObject;
 
   switch (template) {
+    case "Contracting Requirement Submit Message Contracting Team":
+      MailApp.sendEmail({
+        to: "gds-contracting@digital.cabinet-office.gov.uk", // "bradley.parry@digital.cabinet-office.gov.uk",
+        subject: `New Contracting Requirement Submitted`,
+        htmlBody: ConvertGoogleDocToCleanHtml(
+          contractorRequirmentSubmittedMessageToContractingTeam,
+          infoObject
+        ),
+        noReply: true,
+      });
+      break;
+    case "Contracting Requirement Submit Message Finance Team":
+      MailApp.sendEmail({
+        to: "james.murphy@digital.cabinet-office.gov.uk,ajitha.jeyakumar@digital.cabinet-office.gov.uk", //"bradley.parry@digital.cabinet-office.gov.uk",
+        subject: `New Contracting Requirement Submitted`,
+        htmlBody: ConvertGoogleDocToCleanHtml(
+          contractorRequirmentSubmittedMessageToFinanceTeam,
+          infoObject
+        ),
+        noReply: true,
+      });
+      break;
+
+    case "Contracting Requirement Approval Message":
+      MailApp.sendEmail({
+        to: infoObject.CreatedBy,
+        subject: `${infoObject.ID} - Contracting Requirement Approved`,
+        htmlBody: ConvertGoogleDocToCleanHtml(
+          contractorRequirmentApproved,
+          infoObject
+        ),
+        noReply: true,
+      });
+      break;
+
     case "L&D Approval Message":
       MailApp.sendEmail({
         to: infoObject.CreatedBy,
@@ -28,7 +63,9 @@ function sendEmail(emailObject) {
       break;
     case "CS Vacancy Approved Message":
       MailApp.sendEmail({
-        to: infoObject.CreatedBy,
+        to:
+          infoObject.CreatedBy +
+          ",gds-recruitment@digital.cabinet-office.gov.uk",
         subject: `${infoObject.ID} - ${infoObject.jobTitle} - Civil Servant Vacancy Approved`,
         htmlBody: ConvertGoogleDocToCleanHtml(csVacApprovedMessage, infoObject),
         noReply: true,

@@ -84,10 +84,10 @@ function checkUserAccess(
   userTypeListString,
   autopassMaster = true
 ) {
-  if (userTypeListString.includes("Master") && autopassMaster) return true;
+  if (userTypeListString?.includes("Master") && autopassMaster) return true;
   if (!userTypesAccessString) return false;
-  const userTypes = userTypeListString.split("#");
-  return userTypes.some((type) => userTypesAccessString.includes(type));
+  const userTypes = userTypeListString?.split("#");
+  return userTypes.some((type) => userTypesAccessString?.includes(type));
 }
 
 function parseFilterString(inputString) {

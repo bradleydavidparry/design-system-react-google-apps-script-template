@@ -15,11 +15,6 @@ export default class ClassComponentOrgChart extends React.Component {
     };
   }
 
-  // shouldComponentUpdate(nextProps, nextState) {
-  //   console.log({ nextProps, nextState });
-  //   return this.state.currentOrgChartName !== nextProps.currentOrgChartName;
-  // }
-
   componentWillReceiveProps(nextProps) {
     // You don't have to do this check first, but it can help prevent an unneeded render
     if (

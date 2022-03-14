@@ -182,7 +182,7 @@ function View(props) {
     ShowSearchBar,
     ShowSort,
     data,
-    create: CreateUserTypes?.includes(userType),
+    create: creatingPossible,
     Name,
   };
 

@@ -23,16 +23,22 @@ export default function CreateExtensionButton(props) {
     let extensionData = { ...formData };
     delete extensionData.ID;
     delete extensionData.BusinessCaseLink;
-    extensionData.ContractStatus = "Extension";
-    extensionData.ContigentWorkerContractorName = extensionData.FullName;
+    delete extensionData.BusinessPlanStartDate;
+    delete extensionData.BusinessPlanEndDate;
+    extensionData.NeworExtension = "Extension";
+    extensionData.ContingentWorkerContractorName = extensionData.FullName;
+    extensionData.JobTitleNonDDaTRole = extensionData.JobTitle;
+    extensionData.JobTitleDDaTRole = extensionData.JobTitle;
+
     let query = new URLSearchParams(extensionData).toString();
     history.push(
-      `/contractors/create-new-contractor-requirement/add_new?${query}`
+      `/contracting-requirements/create-new-contracting-requirement/add_new?${query}`
     );
   };
 
-  if (formData.CurrentlyEmployed === "No" || !formData.ID) return null;
-  if (checkUserAccess("Business Manager", userType))
+  if (formData.CurrentlyContracted === "No" || !formData.ID) return null;
+  console.log(userType);
+  if (checkUserAccess("Business Manager#GDS User", userType))
     return (
       <Button onClick={requestExtensionBusinessManager}>
         Request Extension Business Manager

@@ -8,6 +8,7 @@ function doGet(e) {
       "bradley.parry@digital.cabinet-office.gov.uk",
       "jas.sahota@digital.cabinet-office.gov.uk",
       "amal.abdulahi@digital.cabinet-office.gov.uk",
+      "diem.pham@digital.cabinet-office.gov.uk",
     ].includes(user)
   ) {
     var sheet =
@@ -96,13 +97,22 @@ function getViewData(schemasToFetch) {
   for (let schemaName of schemasToFetch) {
     let schema;
     let columns;
+    let deliveryDatabase;
     switch (schemaName) {
+      case "Risks Schema":
+        deliveryDatabase = open(deliveryDatabaseId);
+        returnObject[schemaName] = {
+          data: getRows(deliveryDatabase, "Risks").filter(
+            (row) =>
+              (Group === "All" || Group.includes(row.Group)) &&
+              (Team === "All" || Team.includes(row.Team))
+          ),
+          schema: getRows(deliveryDatabase, schemaName),
+        };
+        break;
       case "Diversity":
         returnObject[schemaName] = {
-          data: getRows(
-            open("1K4EsZ7aimUP_R3db_hO5ohP2jE99BElhEEkljDik-ZQ"),
-            "SOP FY"
-          ),
+          data: getRows(open(diversityDatabaseId), "SOP FY"),
           schema: [],
         };
         break;
@@ -141,6 +151,7 @@ function getViewData(schemasToFetch) {
           ]).filter(
             (row) =>
               row.ManagerRequestorName === FullName ||
+              row.CreatedBy === user ||
               ((Group === "All" || Group.includes(row.Group)) &&
                 (Team === "All" || Team.includes(row.Team)))
           ),
@@ -206,6 +217,17 @@ function getViewData(schemasToFetch) {
           schema: schema,
         };
         break;
+      case "HR Approvals Schema":
+        returnObject[schemaName] = {
+          data: getRows(db, "HR Approvals").filter(
+            (row) =>
+              ((Group === "All" || Group.includes(row.Group)) &&
+                (Team === "All" || Team.includes(row.Team))) ||
+              user === row.CreatedBy
+          ),
+          schema: getRows(db, schemaName),
+        };
+        break;
       case "L&D Schema":
         returnObject[schemaName] = {
           data: getRows(db, "L&D Requests").filter(
@@ -260,13 +282,14 @@ function getViewData(schemasToFetch) {
         };
         break;
       case "Deliverables Schema":
+        deliveryDatabase = open(deliveryDatabaseId);
         returnObject[schemaName] = {
-          data: getRows(db, "Deliverables").filter(
+          data: getRows(deliveryDatabase, "Deliverables").filter(
             (row) =>
               (Group === "All" || Group.includes(row.Group)) &&
               (Team === "All" || Team.includes(row.Team))
           ),
-          schema: getRows(db, schemaName),
+          schema: getRows(deliveryDatabase, schemaName),
         };
         break;
       case "Commissioning Schema":
@@ -295,6 +318,11 @@ function updateDataGs({ sheetName, updateObject, emailObject }) {
       break;
     case "R&R Requests":
       sheetId = rAndRId;
+      updateCondition = { ID: updateObject.ID };
+      break;
+    case "Deliverables":
+    case "Risks":
+      sheetId = deliveryDatabaseId;
       updateCondition = { ID: updateObject.ID };
       break;
     default:

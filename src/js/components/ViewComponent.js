@@ -393,7 +393,7 @@ export default function ViewComponent(props) {
       case "Vetting and Onboarding":
         return <OnboardButton formData={data} userType={userType} />;
       case "All Contracting Requirements":
-      case "Contracting Review":
+      case "Planning":
       case "Approvals":
       case "Recruitment and Procurement":
       case "Onboarding":
