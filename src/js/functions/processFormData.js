@@ -135,6 +135,21 @@ function processFormData(schema, newFormData, viewName, dataObject, lookups) {
         ? newFormData.BonusAmount
         : "";
       break;
+    case "Submit New HR Approvals Request":
+      const person = newFormData.NameofIndividual
+        ? dataObject["CS Schema"].data.filter(
+            (person) => person.FullName === newFormData.NameofIndividual
+          )[0]
+        : null;
+      newFormData.Group = person ? person.Group : "";
+      newFormData.Team = person ? person.Team : "";
+      newFormData.JobTitle = person ? person.JobTitle : "";
+      newFormData.Payband = person ? person.Payband : "";
+      newFormData.PersonId = person ? person.ID : "";
+      newFormData.NameofIndividual = newFormData.NameofIndividualHSS
+        ? newFormData.NameofIndividualHSS
+        : newFormData.NameofIndividual;
+      break;
     case "Request New Vacancy":
     case "TEMP Create New Vacancy":
       newFormData.JobTitle = newFormData.JobTitleDDaTRole
@@ -148,6 +163,13 @@ function processFormData(schema, newFormData, viewName, dataObject, lookups) {
       newFormData.JobTitle = newFormData.JobTitleDDaTRole
         ? newFormData.JobTitleDDaTRole
         : newFormData.JobTitleNonDDaTRole;
+      break;
+    case "Add New Requirement Contracting Team Only":
+      newFormData.JobTitle = newFormData.JobTitleDDaTRole
+        ? newFormData.JobTitleDDaTRole
+        : newFormData.JobTitleNonDDaTRole;
+      newFormData.FinanceApproved = "Approved";
+      newFormData.ContractingTeamApproved = "Approved";
       break;
     case "Contracting Requirements For Contracting Team Review":
       newFormData.FinanceApproved =

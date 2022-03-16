@@ -436,6 +436,7 @@ function setSheetCodes() {
     "Workforce Plan Changes": "WPC00000",
     "Workforce Plan": "GDS00000",
     "GDS Data": "COM00000", //Commissioning
+    "HR Approvals": "HRA00000",
   };
 
   for (const sheetName in codeObject) {

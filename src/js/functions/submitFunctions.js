@@ -111,6 +111,8 @@ const updateData = (inputs, goBack) => {
 
   const emailObject = getEmailObject(sheetName, updateObject, record);
 
+  console.log({ sheetName, updateObject, emailObject });
+
   google.script.run
     .withSuccessHandler((id) => {
       const splitSchemas = Schemas.split("#");
@@ -430,6 +432,93 @@ function submitRAndRSection(inputs) {
   submit(inputs);
 }
 
+function submitHrApprovals(inputs) {
+  setSubmitting(true);
+  const { formData } = inputs;
+  const csUpdateObject = { ID: formData.PersonId };
+  if (formData.HRApproved === "Approved") {
+    const { Whattypeofapprovalrequestisthis } = formData;
+    switch (Whattypeofapprovalrequestisthis) {
+      case "Career break":
+        csUpdateObject.TypeofAbsence = "Career Break";
+        // csUpdateObject.LeaveStartDate = formData.RequestedenddateofTDA;
+        break;
+      case "FTA Extension":
+        break;
+      case "Permanency":
+        csUpdateObject.EmploymentStatus = "Permanent";
+        csUpdateObject.ContractEndDate = "";
+        break;
+      case "Recruitment & Retention Allowance":
+        csUpdateObject.RRAannual = formData.Amountofallowancerequested;
+        csUpdateObject.RRAStartDate =
+          formData.Dateyouarerequestingtheallowancetostart;
+        csUpdateObject.RRAEndDate =
+          formData.Dateyouarerequestingtheallowancetoend;
+        break;
+      case "Temporary Duties Allowance":
+        csUpdateObject.TDAannual = formData.TDAAmount;
+        csUpdateObject.TDAstartdate = formData.RequestedstartdateofTDA;
+        csUpdateObject.TDAenddate = formData.RequestedenddateofTDA;
+        break;
+      case "Loan or Secondment":
+        break;
+      default:
+        break;
+    }
+  }
+
+  //HERE
+
+  const { dataObject, setDataObject, setSubmitting, record, schema, lookups } =
+    inputs;
+
+  formData = processFormData(
+    schema,
+    formData,
+    "Onboard Civil Servant",
+    dataObject,
+    lookups
+  );
+
+  const newErrors = checkErrors(inputs);
+  if (Object.keys(newErrors).length > 0) {
+    setSubmitting(false);
+  } else {
+    google.script.run
+      .withSuccessHandler(() => {
+        const newDataObject = { ...dataObject };
+        newDataObject["CS Vacancies Schema"].data = newDataObject[
+          "CS Vacancies Schema"
+        ].data.map((row) => {
+          if (row.ID === formData.VacancyID) {
+            row.RequirementFilled = "Yes";
+          }
+          return row;
+        });
+        setDataObject(newDataObject);
+
+        updateData(inputs, true);
+      })
+      .withFailureHandler((e) => {
+        console.log(e);
+      })
+      .updateDataGs({
+        sheetName: "CS Vacancies",
+        updateObject: {
+          ID: formData.VacancyID,
+          RequirementFilled: "Yes",
+          StatusTimeline: formData.StatusTimeline,
+          ContractStartDate: formatDate(formData.ContractStartDate),
+        },
+      });
+  }
+
+  //HERE
+
+  submit(inputs);
+}
+
 function getSubmitFunction(viewName) {
   switch (viewName) {
     case "Submit New R&R Request":
@@ -464,6 +553,8 @@ function getSubmitFunction(viewName) {
       return TEMPCreateNewVacancy;
     case "Add New Contingent Worker or Contractor":
       return onboardContractorVacancy;
+    case "HR Approvals For HR Approval":
+      return submitHrApprovals;
     default:
       return submit;
   }
